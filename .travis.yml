@@ -109,6 +109,13 @@ before_install:
   fi
 
 install:
+- |
+  cd ~
+  git clone https://github.com/symengine/symengine.git
+  cd symengine
+  make -j 8
+  make install
+
 - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 - if [ -f configure.ac ]; then autoreconf -i; fi
 - |
