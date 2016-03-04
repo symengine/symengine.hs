@@ -4,6 +4,9 @@
 # Use new container infrastructure to enable caching
 sudo: false
 
+compiler:
+  gcc
+
 # Enable HLint for haskell at CodeClimate
 engines:
   hlint:
@@ -101,8 +104,6 @@ matrix:
   - env: BUILD=stack ARGS="--resolver nightly"
 
 before_install:
-# Using compiler above sets CC to an invalid value, so unset it
-- unset CC
 
 # We want to always allow newer versions of packages when building on GHC HEAD
 - CABALARGS=""
@@ -120,6 +121,7 @@ before_install:
   fi
 
 install:
+- export CC gcc-
 - |
   cd ~
   git clone https://github.com/symengine/symengine.git
