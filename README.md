@@ -1,6 +1,8 @@
 # SymEngine-hs
 
 ![travis-build-status](https://travis-ci.org/bollu/symengine.hs.svg?branch=master)
+[![Test Coverage](https://codeclimate.com/github/bollu/symengine.hs/badges/coverage.svg)](https://codeclimate.com/github/bollu/symengine.hs/coverage)
+[![Issue Count](https://codeclimate.com/github/bollu/symengine.hs/badges/issue_count.svg)](https://codeclimate.com/github/bollu/symengine.hs)
 
 Haskell bindings to [SymEngine](https://github.com/symengine/symengine)
 
