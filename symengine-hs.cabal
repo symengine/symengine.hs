@@ -3,12 +3,12 @@ version:             0.1.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.md
 homepage:            http://github.com/githubuser/symengine-hs#readme
-license:             BSD3
+license:             MIT
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2016 Author Here
-category:            Web
+author:              Siddharth Bhat
+maintainer:          siddu.druid@gmail.com
+copyright:           2016 Siddharth Bhat
+category:            FFI, Math, Symbolic Computation
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
@@ -22,7 +22,9 @@ library
 executable symengine-hs-exe
   hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -I/usr/local/include/symengine/ -lsymengine  -lstdc++ -lgmpxx -lgmp
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  include-dirs:        /usr/local/include/symengine/
+  extra-libraries:     symengine stdc++ gmpxxx gmp
   build-depends:       base
                      , symengine-hs
   default-language:    Haskell2010
@@ -33,7 +35,10 @@ test-suite symengine-hs-test
   main-is:             Spec.hs
   build-depends:       base
                      , symengine-hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -I/usr/local/include/symengine/ -lsymengine  -lstdc++ -lgmpxx -lgmp
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  include-dirs:        /usr/local/include/symengine/
+  extra-libraries:     symengine stdc++ gmpxxx gmp
+
   default-language:    Haskell2010
 
 source-repository head
