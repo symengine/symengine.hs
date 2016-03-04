@@ -1,5 +1,7 @@
 # SymEngine-hs
 
+![travis-build-status](https://travis-ci.org/bollu/symengine.hs.svg?branch=master)
+
 Haskell bindings to [SymEngine](https://github.com/symengine/symengine)
 
 # Prerequisites
