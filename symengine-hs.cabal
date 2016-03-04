@@ -22,9 +22,9 @@ library
 executable symengine-hs-exe
   hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N 
   include-dirs:        /usr/local/include/symengine/
-  extra-libraries:     symengine stdc++ gmpxxx gmp
+  extra-libraries:     symengine stdc++ gmpxx gmp
   build-depends:       base
                      , symengine-hs
   default-language:    Haskell2010
@@ -37,7 +37,7 @@ test-suite symengine-hs-test
                      , symengine-hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   include-dirs:        /usr/local/include/symengine/
-  extra-libraries:     symengine stdc++ gmpxxx gmp
+  extra-libraries:     symengine stdc++ gmpxx gmp
 
   default-language:    Haskell2010
 
