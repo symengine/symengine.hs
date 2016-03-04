@@ -120,7 +120,7 @@ before_install:
   fi
 
 install:
-- export CC gcc
+- export CC=gcc
 - |
   cd ~
   git clone https://github.com/symengine/symengine.git
