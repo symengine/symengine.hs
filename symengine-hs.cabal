@@ -2,7 +2,7 @@ name:                symengine-hs
 version:             0.1.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.md
-homepage:            http://github.com/githubuser/symengine-hs#readme
+homepage:            http://github.com/bollu/symengine.hs#readme
 license:             MIT
 license-file:        LICENSE
 author:              Siddharth Bhat
