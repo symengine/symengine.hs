@@ -113,6 +113,7 @@ install:
   cd ~
   git clone https://github.com/symengine/symengine.git
   cd symengine
+  cmake .
   make -j 8
   make install
 
