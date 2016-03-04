@@ -17,7 +17,6 @@ language: c
 
 # Caching so the next build will be fast too.
 cache:
-  - apt
   directories:
   - $HOME/.ghc
   - $HOME/.cabal
