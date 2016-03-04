@@ -26,8 +26,6 @@ addons:
     - libmpc-dev
     - binutils-dev
     - g++-4.7
-    - gcc-5
-    - g++-5
 
 # Caching so the next build will be fast too.
 cache:
