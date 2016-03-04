@@ -1,18 +1,16 @@
 module Lib
-    ( someFunc,
-     ascii_art_str,
-     ascii_art_str_iod
+    (
+     ascii_art_str
     ) where
 
 import Foreign.C.Types
 import Foreign.Ptr
 import Foreign.C.String
 
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+-- exported functions
+ascii_art_str :: IO String
+ascii_art_str = ascii_art_str_raw >>= peekCString
 
+-- Unexported raw functions
 
-ascii_art_str_iod :: IO String
-ascii_art_str_iod = ascii_art_str >>= peekCString
-
-foreign import ccall "cwrapper.h ascii_art_str" ascii_art_str :: IO CString
+foreign import ccall "cwrapper.h ascii_art_str" ascii_art_str_raw :: IO CString
