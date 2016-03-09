@@ -17,20 +17,20 @@ import Foreign.ForeignPtr
 
 
 
-data CRCPBasic_C = CRCPBasic_C {
+data BasicStruct = BasicStruct {
     data_ptr :: Ptr ()
 }
 
-instance Storable CRCPBasic_C where
+instance Storable BasicStruct where
     alignment _ = 8
     sizeOf _ = sizeOf nullPtr
-    peek basic_ptr = CRCPBasic_C <$> peekByteOff basic_ptr 0
-    poke basic_ptr CRCPBasic_C{..} = pokeByteOff basic_ptr 0 data_ptr
+    peek basic_ptr = BasicStruct <$> peekByteOff basic_ptr 0
+    poke basic_ptr BasicStruct{..} = pokeByteOff basic_ptr 0 data_ptr
 
 
-type BasicExternal = ForeignPtr CRCPBasic_C
--- !an array of size 1 of type `CRCPBasic_C`
-type BasicInternal = Ptr CRCPBasic_C
+type BasicExternal = ForeignPtr BasicStruct
+-- !an array of size 1 of type `BasicStruct`
+type BasicInternal = Ptr BasicStruct
 -- exported functions
 
 
@@ -54,7 +54,7 @@ ascii_art_str = ascii_art_str_raw >>= peekCString
 -- the FFI
 create_basic :: IO BasicExternal
 create_basic = do
-    basic_ptr <- newArray [CRCPBasic_C { data_ptr = nullPtr }]
+    basic_ptr <- newArray [BasicStruct { data_ptr = nullPtr }]
     basic_new_heap_raw basic_ptr
     finalized_ptr <- newForeignPtr ptr_basic_free_heap_raw basic_ptr
     return finalized_ptr
