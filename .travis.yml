@@ -176,7 +176,7 @@ before_install:
   export CPATH=$CPATH:$symengine_install_dir/include:$symengine_install_dir/include/symengine/
   export C_INCLUDE_PATH=$C_INCLUDE_PATH:$CPATH
   export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$CPATH
-# cd $HOME/symengine.hs
+- cd $HOME/symengine.hs
 install:
 - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 - if [ -f configure.ac ]; then autoreconf -i; fi
