@@ -176,6 +176,9 @@ before_install:
   export CPATH=$CPATH:$symengine_install_dir/include:$symengine_install_dir/include/symengine/
   export C_INCLUDE_PATH=$C_INCLUDE_PATH:$CPATH
   export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$CPATH
+  export SYMENGINE_LIB_ARGS="--extra-lib-dirs=$symengine_install_dir/lib/"
+  export SYMENGINE_INCLUDE_ARGS="--extra-include-dirs=$symengine_install_dir/include/ --extra-include-dirs=$symengine_install_dir/include/symengine/"
+
 - cd $TRAVIS_BUILD_DIR
 install:
 - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
@@ -183,12 +186,12 @@ install:
 - |
   case "$BUILD" in
     stack)
-      stack --no-terminal --install-ghc $ARGS test --only-dependencies
+      stack --no-terminal --install-ghc $ARGS $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS test --only-dependencies
       ;;
     cabal)
       cabal --version
       travis_retry cabal update
-      cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS
+      cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS  $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS
       ;;
   esac
 
@@ -196,7 +199,7 @@ script:
 - |
   case "$BUILD" in
     stack)
-      stack --no-terminal $ARGS test --haddock --no-haddock-deps
+      stack --no-terminal $ARGS $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS test --haddock --no-haddock-deps
       ;;
     cabal)
       cabal configure --enable-tests --enable-benchmarks -v2 --ghc-options="-O0 -Werror"
@@ -206,6 +209,6 @@ script:
       cabal sdist
       cabal copy
       SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz && \
-        (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
+        (cd dist && cabal install --force-reinstalls "$SRC_TGZ"  $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS)
       ;;
   esac
