@@ -60,7 +60,7 @@ matrix:
                               g++-4.7,
                               gcc,
                               cabal-install-1.18,ghc-7.8.4],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-tes]}}
+                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
   - env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22
     compiler: ": #GHC 7.10.3"
     addons: {apt: {packages: [libgmp-dev,
@@ -70,7 +70,7 @@ matrix:
                               g++-4.7,
                               gcc,
                               cabal-install-1.22,ghc-7.10.3],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-tes]}}
+                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
@@ -83,7 +83,7 @@ matrix:
                               g++-4.7,
                               gcc,
                               cabal-install-head,ghc-head],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-tes]}}
+                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
@@ -96,7 +96,7 @@ matrix:
                               g++-4.7,
                               gcc,
                               ghc-7.8.4],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-tes]}}
+                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   - env: BUILD=stack ARGS="--resolver lts-3" CC=gcc-4.7 CXX=g++-4.7
     compiler: ": #stack 7.10.2"
@@ -107,7 +107,7 @@ matrix:
                               g++-4.7,
                               gcc,
                               ghc-7.10.2],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-tes]}}
+                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   - env: BUILD=stack ARGS="--resolver lts-5" CC=gcc-4.7 CXX=g++-4.7
     compiler: ": #stack 7.10.3"
@@ -118,7 +118,7 @@ matrix:
                               g++-4.7,
                               gcc,
                               ghc-7.10.3],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-tes]}}
+                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   # Nightly builds are allowed to fail
   - env: BUILD=stack ARGS="--resolver nightly" CC=gcc-4.7 CXX=g++-4.7
