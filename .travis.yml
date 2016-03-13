@@ -171,11 +171,11 @@ install:
   export CC=gcc-4.7
   export CXX=g++-4.7
   cd $HOME && git clone https://github.com/symengine/symengine.git
-  cd $HOME/symengine && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$symengine_install_dir -DBUILD_TESTS=no . && make -j8 install;
-  export PATH=$PATH:$HOME/symengine/build/:$symengine_install_dir
-  export CPATH=$HOME/symengine/symengine:$symengine_install_dir
-  export C_INCLUDE_PATH=$CPATH
-  export CPLUS_INCLUDE_PATH=$CPATH
+  cd $HOME/symengine && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$symengine_install_dir -DBUILD_TESTS=no . && make -j8 install && cd ../;
+  export PATH=$PATH:$symengine_install_dir/lib/
+  export CPATH=$CPATH:$symengine_install_dir/include:$symengine_install_dir/include/symengine/
+  export C_INCLUDE_PATH=$C_INCLUDE_PATH:$CPATH
+  export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$CPATH
 
 - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 - if [ -f configure.ac ]; then autoreconf -i; fi
