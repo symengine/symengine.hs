@@ -163,7 +163,7 @@ before_install:
     curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
   fi
 
-install:
+# Download and install symengine
 - |
   export symengine_install_dir=$HOME/symengine-install/
   mkdir -p symengine_install_dir
@@ -176,7 +176,8 @@ install:
   export CPATH=$CPATH:$symengine_install_dir/include:$symengine_install_dir/include/symengine/
   export C_INCLUDE_PATH=$C_INCLUDE_PATH:$CPATH
   export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$CPATH
-
+# cd $HOME/symengine.hs
+install:
 - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 - if [ -f configure.ac ]; then autoreconf -i; fi
 - |
