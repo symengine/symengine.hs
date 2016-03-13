@@ -11,3 +11,4 @@ main = do
  zero_str <- basic_str zero
  putStr $ "\nbasic string: " ++ zero_str 
  return ()
+ 

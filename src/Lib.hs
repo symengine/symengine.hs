@@ -14,7 +14,7 @@ import Foreign.C.String
 import Foreign.Storable
 import Foreign.Marshal.Array
 import Foreign.ForeignPtr
-
+import Control.Applicative
 
 
 data BasicStruct = BasicStruct {
