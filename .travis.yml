@@ -166,12 +166,12 @@ before_install:
 install:
 - |
   export symengine_install_dir=$HOME/symengine-install/
+  mkdir -p symengine_install_dir
+
   export CC=gcc-4.7
   export CXX=g++-4.7
-  cd ~
-  git clone https://github.com/symengine/symengine.git
-  cd symengine
-  cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$symengine_install_dir -DBUILD_TESTS=no ../ && make -j8 install && cd ../..;
+  cd $HOME && git clone https://github.com/symengine/symengine.git
+  cd $HOME/symengine && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$symengine_install_dir -DBUILD_TESTS=no ../ && make -j8 install && cd ../..;
   export PATH=$PATH:$HOME/symengine/build/:$symengine_install_dir
   export CPATH=$HOME/symengine/symengine:$symengine_install_dir
   export C_INCLUDE_PATH=$CPATH
