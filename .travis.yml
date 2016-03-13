@@ -164,21 +164,16 @@ before_install:
   fi
 
 install:
-- export CC=gcc-4.7
-- export CXX=g++-4.7
 - |
+  export symengine_install_dir=$HOME/symengine-install/
+  export CC=gcc-4.7
+  export CXX=g++-4.7
   cd ~
   git clone https://github.com/symengine/symengine.git
   cd symengine
-
-#- bin/test_travis.sh
-
-- |
-  cmake .
-  make -j 8 build
-  # add the built library path so that haskell can use it
-  export PATH=$PATH:$HOME/symengine/build/
-  export CPATH=$HOME/symengine/
+  cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$symengine_install_dir -DBUILD_TESTS=no ../ && make -j8 install && cd ../..;
+  export PATH=$PATH:$HOME/symengine/build/:$symengine_install_dir
+  export CPATH=$HOME/symengine/symengine:$symengine_install_dir
   export C_INCLUDE_PATH=$CPATH
   export CPLUS_INCLUDE_PATH=$CPATH
 
