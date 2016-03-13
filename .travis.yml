@@ -130,8 +130,8 @@ install:
   git clone https://github.com/symengine/symengine.git
   cd symengine
   cmake .
-  make -j 8
-  make install
+  make -j 8 build
+  cp build/libsymengine.a /usr/local/lib/
 
 - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 - if [ -f configure.ac ]; then autoreconf -i; fi
