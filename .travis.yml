@@ -20,6 +20,8 @@ language: c
 
 addons:
   apt:
+    sources:
+    - ubuntu-toolchain-r-test
     packages:
     - libgmp-dev
     - libmpfr-dev
