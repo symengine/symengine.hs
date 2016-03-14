@@ -159,15 +159,19 @@ before_install:
     curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
   fi
 
+# set C/C++ compiler version for platform
+- |
+  if [ `uname` != "Darwin" ]
+  then
+    export CC=gcc-4.7
+    export CXX=g++-4.7
+  fi
+
 # Download and install symengine
 - |
   export symengine_install_dir=$HOME/symengine-install/
   mkdir -p symengine_install_dir
  
-  if [ `uname` != "Darwin" ] then
-     export CC=gcc-4.7
-     export CXX=g++-4.7
-  fi
   cd $HOME && git clone https://github.com/symengine/symengine.git
   cd $HOME/symengine && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$symengine_install_dir -DBUILD_TESTS=no . && make -j8 install && cd ../
 
