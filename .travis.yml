@@ -51,7 +51,7 @@ matrix:
   include:
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
   # https://github.com/hvr/multi-ghc-travis
-  - env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18 CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
@@ -72,7 +72,7 @@ matrix:
 
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
-  - env: BUILD=cabal GHCVER=head  CABALVER=head CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=cabal GHCVER=head  CABALVER=head
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
@@ -84,7 +84,7 @@ matrix:
 
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
-  - env: BUILD=stack ARGS="--resolver lts-2" CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=stack ARGS="--resolver lts-2"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
@@ -94,7 +94,7 @@ matrix:
                               ghc-7.8.4],
                   sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
-  - env: BUILD=stack ARGS="--resolver lts-3" CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=stack ARGS="--resolver lts-3"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
@@ -104,7 +104,7 @@ matrix:
                               ghc-7.10.2],
                   sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
-  - env: BUILD=stack ARGS="--resolver lts-5" CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=stack ARGS="--resolver lts-5"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
@@ -115,7 +115,7 @@ matrix:
                   sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   # Nightly builds are allowed to fail
-  - env: BUILD=stack ARGS="--resolver nightly" CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=stack ARGS="--resolver nightly"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
@@ -139,8 +139,8 @@ matrix:
     os: osx
 
   allow_failures:
-  - env: BUILD=cabal GHCVER=head  CABALVER=head CC=gcc-4.7 CXX=g++-4.7
-  - env: BUILD=stack ARGS="--resolver nightly" CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=cabal GHCVER=head  CABALVER=head
+  - env: BUILD=stack ARGS="--resolver nightly"
 
 before_install:
 
@@ -163,7 +163,11 @@ before_install:
 - |
   export symengine_install_dir=$HOME/symengine-install/
   mkdir -p symengine_install_dir
-
+ 
+  if [ `uname` != "Darwin" ] then
+     export CC=gcc-4.7
+     export CXX=g++-4.7
+  fi
   cd $HOME && git clone https://github.com/symengine/symengine.git
   cd $HOME/symengine && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$symengine_install_dir -DBUILD_TESTS=no . && make -j8 install && cd ../
 
