@@ -116,19 +116,26 @@ matrix:
 
   # Nightly builds are allowed to fail
   - env: BUILD=stack ARGS="--resolver nightly" CC=gcc-4.7 CXX=g++-4.7
-    addons: {apt: {packages: }}
+    addons: {apt: {packages: [libgmp-dev,
+                              libmpfr-dev,
+                              libmpc-dev,
+                              binutils-dev,
+                              g++-4.7,
+                              gcc,
+                              ghc-7.10.3],
+                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   # Build on OS X in addition to Linux
-  - env: BUILD=stack ARGS="--resolver lts-2" CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=stack ARGS="--resolver lts-2"
     os: osx
 
-  - env: BUILD=stack ARGS="--resolver lts-3" CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=stack ARGS="--resolver lts-3"
     os: osx
 
-  - env: BUILD=stack ARGS="--resolver lts-5" CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=stack ARGS="--resolver lts-5"
     os: osx
 
-  - env: BUILD=stack ARGS="--resolver nightly" CC=gcc-4.7 CXX=g++-4.7
+  - env: BUILD=stack ARGS="--resolver nightly"
     os: osx
 
   allow_failures:
