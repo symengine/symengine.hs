@@ -56,4 +56,4 @@ As the output.
 
 # License
 
-All code is released under the [MIT License](https://github.com/symengine/symengine.hs/blob/master/LICENSE.md).
+All code is released under the [MIT License](https://github.com/symengine/symengine.hs/blob/master/LICENSE).
