@@ -1,8 +1,8 @@
 # SymEngine-hs
 
-[![Build Status](https://travis-ci.org/bollu/symengine.hs.svg?branch=master)](https://travis-ci.org/bollu/symengine.hs)
-[![Test Coverage](https://codeclimate.com/github/bollu/symengine.hs/badges/coverage.svg)](https://codeclimate.com/github/bollu/symengine.hs/coverage)
-[![Issue Count](https://codeclimate.com/github/bollu/symengine.hs/badges/issue_count.svg)](https://codeclimate.com/github/bollu/symengine.hs)
+[![Build Status](https://travis-ci.org/symengine/symengine.hs.svg?branch=master)](https://travis-ci.org/symengine/symengine.hs)
+[![Test Coverage](https://codeclimate.com/github/symengine/symengine.hs/badges/coverage.svg)](https://codeclimate.com/github/symengine/symengine.hs/coverage)
+[![Issue Count](https://codeclimate.com/github/symengine/symengine.hs/badges/issue_count.svg)](https://codeclimate.com/github/symengine/symengine.hs)
 
 Haskell bindings to [SymEngine](https://github.com/symengine/symengine)
 
