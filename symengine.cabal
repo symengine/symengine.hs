@@ -1,0 +1,46 @@
+name:                symengine
+version:             0.1.1.0
+synopsis:            SymEngine symbolic mathematics engine for Haskell
+description:         Please see README.md
+homepage:            http://github.com/symengine/symengine.hs#readme
+license:             MIT
+license-file:        LICENSE
+author:              Siddharth Bhat
+maintainer:          siddu.druid@gmail.com
+copyright:           2016 Siddharth Bhat
+category:            FFI, Math, Symbolic Computation
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Lib
+  build-depends:       base
+  default-language:    Haskell2010
+
+executable symengine-exe
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N 
+  include-dirs:        /usr/local/include/
+  extra-libraries:     symengine stdc++ gmpxx gmp
+  build-depends:       base >= 4.7 && < 5
+                     , symengine
+  default-language:    Haskell2010
+
+test-suite symengine-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , symengine
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  include-dirs:        /usr/local/include/
+  extra-libraries:     symengine stdc++ gmpxx gmp
+
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/symengine/symengine.hs
