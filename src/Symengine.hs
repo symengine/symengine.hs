@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Lib
+module Symengine
     (
      ascii_art_str,
      basic_str,

@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Symengine
 
 main :: IO ()
 main = do
