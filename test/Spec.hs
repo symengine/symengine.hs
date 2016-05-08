@@ -23,5 +23,7 @@ unitTests = testGroup "Unit tests"
   [ HU.testCase "FFI Sanity Check - ASCII Art should be non-empty" $ 
     do
       ascii_art <- Sym.ascii_art_str
+      zero <- basic_const_zero
+      print $ show zero
       HU.assertBool "ASCII art from ascii_art_str is empty" (not . null $ ascii_art)
   ]
