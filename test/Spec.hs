@@ -5,7 +5,7 @@ import Test.Tasty.HUnit as HU
 import Data.List
 import Data.Ord
 
-import Lib as L
+import Symengine as Sym
 
 main = defaultMain tests
 
@@ -19,12 +19,9 @@ tests = testGroup "Tests" [unitTests]
 -- properties :: TestTree
 -- properties = testGroup "Properties" [qcProps]
 
--- qcProps = testGroup "(checked by QuickCheck)"
-
 unitTests = testGroup "Unit tests"
-  [ HU.testCase "FFI Sanity Check - ASCII Art" $ 
+  [ HU.testCase "FFI Sanity Check - ASCII Art should be non-empty" $ 
     do
-      ascii_art <- L.ascii_art_str
-      let expected_str = " _____           _____         _         \n|   __|_ _ _____|   __|___ ___|_|___ ___ \n|__   | | |     |   __|   | . | |   | -_|\n|_____|_  |_|_|_|_____|_|_|_  |_|_|_|___|\n      |___|               |___|          \n"
-      HU.assertEqual "ASCII art from ascii_art_str is wrong" expected_str ascii_art
+      ascii_art <- Sym.ascii_art_str
+      HU.assertBool "ASCII art from ascii_art_str is empty" (not . null $ ascii_art)
   ]
