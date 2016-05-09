@@ -1,12 +1,8 @@
 # Copy these contents into the root directory of your Github project in a file
 # named .travis.yml
 
-set -e
 # Use new container infrastructure to enable caching
 sudo: false
-
-compiler:
-  gcc
 
 # Enable HLint for haskell at CodeClimate
 engines:
@@ -15,6 +11,7 @@ engines:
 ratings:
   paths:
   - "**.hs"
+
 
 # Choose a lightweight base image; we provide our own build tools.
 language: c
@@ -47,174 +44,257 @@ cache:
 #
 # If you need to have different apt packages for each combination in the
 # matrix, you can use a line such as:
-#     addons: {apt: {packages: []}}
+#     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
 matrix:
   include:
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
   # https://github.com/hvr/multi-ghc-travis
-  - env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18
+  #- env: BUILD=cabal GHCVER=7.0.4 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #  compiler: ": #GHC 7.0.4"
+  #  addons: {apt: {packages: [cabal-install-1.16,ghc-7.0.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+  #- env: BUILD=cabal GHCVER=7.2.2 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #  compiler: ": #GHC 7.2.2"
+  #  addons: {apt: {packages: [cabal-install-1.16,ghc-7.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+  - env: BUILD=cabal GHCVER=7.4.2 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 7.4.2"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
                               binutils-dev,
                               g++-4.7,
-                              gcc,
-                              cabal-install-1.18,ghc-7.8.4],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
-  - env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22
+                              gcc, cabal-install-1.16,ghc-7.4.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+  - env: BUILD=cabal GHCVER=7.6.3 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 7.6.3"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
                               binutils-dev,
                               g++-4.7,
-                              gcc,
-                              cabal-install-1.22,ghc-7.10.3],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+                              gcc, cabal-install-1.16,ghc-7.6.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+  - env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 7.8.4"
+    addons: {apt: {packages: [libgmp-dev,
+                              libmpfr-dev,
+                              libmpc-dev,
+                              binutils-dev,
+                              g++-4.7,
+                              gcc, cabal-install-1.18,ghc-7.8.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+  - env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 7.10.3"
+    addons: {apt: {packages: [libgmp-dev,
+                              libmpfr-dev,
+                              libmpc-dev,
+                              binutils-dev,
+                              g++-4.7,
+                              gcc, cabal-install-1.22,ghc-7.10.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
-  - env: BUILD=cabal GHCVER=head  CABALVER=head
+  - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC HEAD"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
                               binutils-dev,
                               g++-4.7,
-                              gcc,
-                              cabal-install-head,ghc-head],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+                              gcc, cabal-install-head,ghc-head,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
-  - env: BUILD=stack ARGS="--resolver lts-2"
+  - env: BUILD=stack ARGS=" "
+    compiler: ": #stack default"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
                               binutils-dev,
                               g++-4.7,
-                              gcc,
-                              ghc-7.8.4],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+                              gcc, ghc-7.10.3], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+
+  - env: BUILD=stack ARGS="--resolver lts-2"
+    compiler: ": #stack 7.8.4"
+    addons: {apt: {packages: [libgmp-dev,
+                              libmpfr-dev,
+                              libmpc-dev,
+                              binutils-dev,
+                              g++-4.7,
+                              gcc, ghc-7.8.4], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   - env: BUILD=stack ARGS="--resolver lts-3"
+    compiler: ": #stack 7.10.2"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
                               binutils-dev,
                               g++-4.7,
-                              gcc,
-                              ghc-7.10.2],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+                              gcc, ghc-7.10.2], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   - env: BUILD=stack ARGS="--resolver lts-5"
+    compiler: ": #stack 7.10.3"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
                               binutils-dev,
                               g++-4.7,
-                              gcc,
-                              ghc-7.10.3],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+                              gcc, ghc-7.10.3], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   # Nightly builds are allowed to fail
   - env: BUILD=stack ARGS="--resolver nightly"
+    compiler: ": #stack nightly"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
                               binutils-dev,
                               g++-4.7,
-                              gcc,
-                              ghc-7.10.3],
-                  sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+                              gcc, libgmp-dev]}}
 
   # Build on OS X in addition to Linux
+  - env: BUILD=stack ARGS=" "
+    compiler: ": #stack default osx"
+    os: osx
+
   - env: BUILD=stack ARGS="--resolver lts-2"
+    compiler: ": #stack 7.8.4 osx"
     os: osx
 
   - env: BUILD=stack ARGS="--resolver lts-3"
+    compiler: ": #stack 7.10.2 osx"
     os: osx
 
   - env: BUILD=stack ARGS="--resolver lts-5"
+    compiler: ": #stack 7.10.3 osx"
     os: osx
 
   - env: BUILD=stack ARGS="--resolver nightly"
+    compiler: ": #stack nightly osx"
     os: osx
 
   allow_failures:
-  - env: BUILD=cabal GHCVER=head  CABALVER=head
+  - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
   - env: BUILD=stack ARGS="--resolver nightly"
 
-before_install:
 
+install:
+# SYMENGINE INSTALL PHASE
+# =======================
+# Download and install symengine
+- |
+  set -ex
+  export SYMENGINE_INSTALL_DIR=$HOME/symengine-install
+  mkdir -p $SYMENGINE_INSTALL_DIR
+  cd $HOME && git clone https://github.com/symengine/symengine.git
+  
+- |
+  if [ `uname` = "Darwin" ]
+  then
+    export CC="clang" && export CXX="clang++" && export CMAKE_C_COMPILER=$CC && export CMAKE_CXX_COMPILER=$CXX
+
+    # build gmp with clang
+    wget https://raw.githubusercontent.com/symengine/dependencies/6a42d290071921a0a478c6883fc0ddd709d664c9/gmp-6.0.0a.tar.bz2
+    tar -xjf gmp-6.0.0a.tar.bz2;
+    cd gmp-6.0.0 && ./configure --prefix=$SYMENGINE_INSTALL_DIR --enable-cxx && make -j8 install && cd ..;
+
+  else
+    export CC="gcc" && export CXX="g++-4.7" && export CMAKE_C_COMPILER=$CC && export CMAKE_CXX_COMPILER=$CXX  
+  fi
+  cd $HOME/symengine
+  # cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$SYMENGINE_INSTALL_DIR/ -DBUILD_TESTS=no  -DBUILD_SHARED_LIBS:BOOL=ON .
+  cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$SYMENGINE_INSTALL_DIR/ -DBUILD_TESTS=no  .
+  make
+  make install
+  echo "listing symengine install dir" && echo "======================"
+  ls -R $SYMENGINE_INSTALL_DIR
+  cd ../
+
+# export stuff and get out
+- |
+  export PATH=$PATH:"$SYMENGINE_INSTALL_DIR/lib/"
+  export CPATH=$CPATH:"$SYMENGINE_INSTALL_DIR/include:$SYMENGINE_INSTALL_DIR/include/symengine/"
+  export C_INCLUDE_PATH="$C_INCLUDE_PATH:$CPATH"
+  export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:$CPATH"
+  export SYMENGINE_LIB_ARGS_STACK="--extra-lib-dirs=$SYMENGINE_INSTALL_DIR/lib/"
+  export SYMENGINE_LIB_ARGS_CABAL="--extra-lib-dirs=$SYMENGINE_INSTALL_DIR/lib/"
+  
+  export SYMENGINE_INCLUDE_ARGS="--extra-include-dirs=$SYMENGINE_INSTALL_DIR/include/ --extra-include-dirs=$SYMENGINE_INSTALL_DIR/include/symengine/"
+  export SYMENGINE_INCLUDE_ARGS_CABAL="--extra-include-dirs=$SYMENGINE_INSTALL_DIR/include/ --extra-include-dirs=$SYMENGINE_INSTALL_DIR/include/symengine/ --include-dir=SYMENGINE_INSTALL_DIR/include/symengine/ --include-dir=$SYMENGINE_INSTALL_DIR/include/"
+  cd $TRAVIS_BUILD_DIR
+
+
+# GHC INSTALL PHASE
+# =================
+# Using compiler above sets CC to an invalid value, so unset it
+- unset CC
 # We want to always allow newer versions of packages when building on GHC HEAD
 - CABALARGS=""
 - if [ "x$GHCVER" = "xhead" ]; then CABALARGS=--allow-newer; fi
 
 # Download and unpack the stack executable
-- export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$HOME/.local/bin:$PATH
+- export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$HOME/.local/bin:/opt/alex/$ALEXVER/bin:/opt/happy/$HAPPYVER/bin:$HOME/.cabal/bin:$PATH
 - mkdir -p ~/.local/bin
 - |
   if [ `uname` = "Darwin" ]
   then
-    curl --insecure -L https://www.stackage.org/stack/osx-x86_64 | tar xz --strip-components=1 --include '*/stack' -C ~/.local/bin
+    travis_retry curl --insecure -L https://www.stackage.org/stack/osx-x86_64 | tar xz --strip-components=1 --include '*/stack' -C ~/.local/bin
   else
-    curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+    travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
   fi
+  # Use the more reliable S3 mirror of Hackage
+  mkdir -p $HOME/.cabal
+  echo 'remote-repo: hackage.haskell.org:http://hackage.fpcomplete.com/' > $HOME/.cabal/config
+  echo 'remote-repo-cache: $HOME/.cabal/packages' >> $HOME/.cabal/config
 
-# set C/C++ compiler version for platform
-- |
-  if [ `uname` != "Darwin" ]
+  if [ "$CABALVER" != "1.16" ]
   then
-    export CC=gcc-4.7
-    export CXX=g++-4.7
+    echo 'jobs: $ncpus' >> $HOME/.cabal/config
   fi
+# Get the list of packages from the stack.yaml file
+- PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
 
-# Download and install symengine
-- |
-  export symengine_install_dir=$HOME/symengine-install/
-  mkdir -p symengine_install_dir
- 
-  cd $HOME && git clone https://github.com/symengine/symengine.git
-  cd $HOME/symengine && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$symengine_install_dir -DBUILD_TESTS=no . && make -j8 install && cd ../
-
-# export stuff and get out
-- |
-  export PATH=$PATH:$symengine_install_dir/lib/
-  export CPATH=$CPATH:$symengine_install_dir/include:$symengine_install_dir/include/symengine/
-  export C_INCLUDE_PATH=$C_INCLUDE_PATH:$CPATH
-  export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$CPATH
-  export SYMENGINE_LIB_ARGS=--extra-lib-dirs=$symengine_install_dir/lib/
-  export SYMENGINE_INCLUDE_ARGS=--extra-include-dirs=$symengine_install_dir/include/ --extra-include-dirs=$symengine_install_dir/include/symengine/
-  cd $TRAVIS_BUILD_DIR
-
-install:
+# PROJECT INSTALL PHASE
+# =====================
 - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 - if [ -f configure.ac ]; then autoreconf -i; fi
 - |
+  set -ex
   case "$BUILD" in
     stack)
-      stack --no-terminal --install-ghc $ARGS $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS test --only-dependencies
+      stack --no-terminal --install-ghc $ARGS test --only-dependencies
       ;;
     cabal)
       cabal --version
       travis_retry cabal update
-      cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS  $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS
+      cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES $SYMENGINE_LIB_ARGS_CABAL $SYMENGINE_INCLUDE_ARGS
       ;;
   esac
+  set +ex
+
 
 script:
 - |
+  set -ex
   case "$BUILD" in
     stack)
-      stack --no-terminal $ARGS $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS test --haddock --no-haddock-deps
+      stack --no-terminal $ARGS $SYMENGINE_LIB_ARGS_STACK $SYMENGINE_INCLUDE_ARGS test --haddock --no-haddock-deps
       ;;
     cabal)
-      cabal configure --enable-tests --enable-benchmarks -v2 --ghc-options="-O0 -Werror" $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS
+      cabal update
+      cabal configure --enable-tests --enable-benchmarks --ghc-options=-O0 $CABALARGS  $SYMENGINE_LIB_ARGS_CABAL $SYMENGINE_INCLUDE_ARGS
       cabal build
-      cabal check || [ "$CABALVER" == "1.16" ]
-      cabal test
-      cabal sdist
-      cabal copy
-      SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz && \
-        (cd dist && cabal install --force-reinstalls "$SRC_TGZ"  $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS)
+      # run cabal test directly
+      cabal test --show-details=streaming
+
+      # install after building the library
+      # cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES $SYMENGINE_LIB_ARGS_CABAL $SYMENGINE_INCLUDE_ARGS
+
+      ORIGDIR=$(pwd)
+      for dir in $PACKAGES
+      do
+        cd $dir
+        cabal check || [ "$CABALVER" == "1.16" ]
+        cabal sdist
+        SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz && \
+          (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
+        cd $ORIGDIR
+      done
       ;;
   esac
+  set +ex

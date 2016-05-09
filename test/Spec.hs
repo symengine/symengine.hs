@@ -19,6 +19,8 @@ tests = testGroup "Tests" [unitTests]
 -- properties :: TestTree
 -- properties = testGroup "Properties" [qcProps]
 
+
+
 unitTests = testGroup "Unit tests"
   [ HU.testCase "FFI Sanity Check - ASCII Art should be non-empty" $ 
     do
