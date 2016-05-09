@@ -49,6 +49,14 @@ basic_const_minus_one = basic_obj_constructor basic_const_minus_one_ffi
 basic_const_I :: IO BasicPtr
 basic_const_I = basic_obj_constructor basic_const_I_ffi
 
+basic_const_pi :: IO BasicPtr
+basic_const_pi = basic_obj_constructor basic_const_pi_ffi
+
+basic_const_E :: IO BasicPtr
+basic_const_E = basic_obj_constructor basic_const_E_ffi
+
+basic_const_EulerGamma :: IO BasicPtr
+basic_const_EulerGamma = basic_obj_constructor basic_const_EulerGamma_ffi
 
 basic_obj_constructor :: (Ptr BasicStruct -> IO ()) -> IO BasicPtr
 basic_obj_constructor init_fn = do
@@ -80,9 +88,16 @@ create_basic_ptr = do
 foreign import ccall "symengine/cwrapper.h ascii_art_str" ascii_art_str_ffi :: IO CString
 foreign import ccall "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h &basic_free_heap" ptr_basic_free_heap_ffi :: FunPtr(Ptr BasicStruct -> IO ())
+
+-- constants
 foreign import ccall "symengine/cwrapper.h basic_const_zero" basic_const_zero_ffi :: Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_const_one" basic_const_one_ffi :: Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_const_minus_one" basic_const_minus_one_ffi :: Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_const_I" basic_const_I_ffi :: Ptr BasicStruct -> IO ()
-
+foreign import ccall "symengine/cwrapper.h basic_const_pi" basic_const_pi_ffi :: Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_const_E" basic_const_E_ffi :: Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_const_EulerGamma" basic_const_EulerGamma_ffi :: Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_str" basic_str_ffi :: Ptr BasicStruct -> IO CString
+
+--operations
+foreign import ccall "symengine/cwrapper.h basic_add" basic_add_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO ()
