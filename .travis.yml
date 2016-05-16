@@ -179,45 +179,64 @@ install:
 # Download and install symengine
 - |
   set -ex
-  export SYMENGINE_INSTALL_DIR=$HOME/symengine-install
-  mkdir -p $SYMENGINE_INSTALL_DIR
+  export our_install_dir=$HOME/symengine-install
+  mkdir -p $our_install_dir
   cd $HOME && git clone https://github.com/symengine/symengine.git
   
-- |
-  if [ `uname` = "Darwin" ]
-  then
-    export CC="clang" && export CXX="clang++" && export CMAKE_C_COMPILER=$CC && export CMAKE_CXX_COMPILER=$CXX
+# - |
+#   if [ `uname` = "Darwin" ]
+#   then
+#     export CC="clang" && export CXX="clang++" && export CMAKE_C_COMPILER=$CC && export CMAKE_CXX_COMPILER=$CXX
 
-    # build gmp with clang
-    wget https://raw.githubusercontent.com/symengine/dependencies/6a42d290071921a0a478c6883fc0ddd709d664c9/gmp-6.0.0a.tar.bz2
-    tar -xjf gmp-6.0.0a.tar.bz2;
-    cd gmp-6.0.0 && ./configure --prefix=$SYMENGINE_INSTALL_DIR --enable-cxx && make -j8 install && cd ..;
+#     # build gmp with clang
+#     wget https://raw.githubusercontent.com/symengine/dependencies/6a42d290071921a0a478c6883fc0ddd709d664c9/gmp-6.0.0a.tar.bz2
+#     tar -xjf gmp-6.0.0a.tar.bz2;
+#     cd gmp-6.0.0 && ./configure --prefix=$our_install_dir --enable-cxx && make -j8 install && cd ..;
 
-  else
-    export CC="gcc" && export CXX="g++-4.7" && export CMAKE_C_COMPILER=$CC && export CMAKE_CXX_COMPILER=$CXX  
-  fi
-  cd $HOME/symengine
-  # cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$SYMENGINE_INSTALL_DIR/ -DBUILD_TESTS=no  -DBUILD_SHARED_LIBS:BOOL=ON .
-  cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$SYMENGINE_INSTALL_DIR/ -DBUILD_TESTS=no  .
-  make
-  make install
-  echo "listing symengine install dir" && echo "======================"
-  ls -R $SYMENGINE_INSTALL_DIR
-  cd ../
+#   else
+#     export CC="gcc" && export CXX="g++-4.7" && export CMAKE_C_COMPILER=$CC && export CMAKE_CXX_COMPILER=$CXX  
+#   fi
+#   cd $HOME/symengine
+#   # cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$our_install_dir/ -DBUILD_TESTS=no  -DBUILD_SHARED_LIBS:BOOL=ON .
+#   cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$our_install_dir/ -DBUILD_TESTS=no  .
+#   make
+#   make install
+#   echo "listing symengine install dir" && echo "======================"
+#   ls -R $our_install_dir
+#   cd ../
 
-# export stuff and get out
-- |
-  export PATH=$PATH:"$SYMENGINE_INSTALL_DIR/lib/"
-  export CPATH=$CPATH:"$SYMENGINE_INSTALL_DIR/include:$SYMENGINE_INSTALL_DIR/include/symengine/"
-  export C_INCLUDE_PATH="$C_INCLUDE_PATH:$CPATH"
-  export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:$CPATH"
-  export SYMENGINE_LIB_ARGS_STACK="--extra-lib-dirs=$SYMENGINE_INSTALL_DIR/lib/"
-  export SYMENGINE_LIB_ARGS_CABAL="--extra-lib-dirs=$SYMENGINE_INSTALL_DIR/lib/"
+# # export stuff and get out
+# - |
+#   export PATH=$PATH:"$our_install_dir/lib/"
+#   export CPATH=$CPATH:"$our_install_dir/include:$our_install_dir/include/symengine/"
+#   export C_INCLUDE_PATH="$C_INCLUDE_PATH:$CPATH"
+#   export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:$CPATH"
+#   export SYMENGINE_LIB_ARGS="--extra-lib-dirs=$our_install_dir/lib/"
+#   export SYMENGINE_LIB_ARGS="--extra-lib-dirs=$our_install_dir/lib/"
   
-  export SYMENGINE_INCLUDE_ARGS="--extra-include-dirs=$SYMENGINE_INSTALL_DIR/include/ --extra-include-dirs=$SYMENGINE_INSTALL_DIR/include/symengine/"
-  export SYMENGINE_INCLUDE_ARGS_CABAL="--extra-include-dirs=$SYMENGINE_INSTALL_DIR/include/ --extra-include-dirs=$SYMENGINE_INSTALL_DIR/include/symengine/ --include-dir=SYMENGINE_INSTALL_DIR/include/symengine/ --include-dir=$SYMENGINE_INSTALL_DIR/include/"
-  cd $TRAVIS_BUILD_DIR
+#   export SYMENGINE_INCLUDE_ARGS="--extra-include-dirs=$our_install_dir/include/ --extra-include-dirs=$our_install_dir/include/symengine/"
+#   export SYMENGINE_INCLUDE_ARGS_CABAL="--extra-include-dirs=$our_install_dir/include/ --extra-include-dirs=$our_install_dir/include/symengine/ --include-dir=our_install_dir/include/symengine/ --include-dir=$our_install_dir/include/"
+#   cd $TRAVIS_BUILD_DIR
 
+# SYMENGINE INSTALL PHASE
+# =======================
+# Download and install symengine
+
+- |
+  set -ex
+  export TEST_CPP="no"
+  cd $HOME/symengine
+  source bin/install_travis.sh
+  bin/test_travis.sh
+
+# EXPORT PHASE
+# ============
+- |
+   # $our_install_dir is exported by test_travis.sh from symengine
+   set -ex
+   export SYMENGINE_LIB_ARGS="--extra-lib-dirs=$our_install_dir/lib/"  
+   export SYMENGINE_INCLUDE_ARGS="--extra-include-dirs=$our_install_dir/include/ --extra-include-dirs=$our_install_dir/include/symengine/"
+   cd $TRAVIS_BUILD_DIR
 
 # GHC INSTALL PHASE
 # =================
@@ -262,7 +281,7 @@ install:
     cabal)
       cabal --version
       travis_retry cabal update
-      cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES $SYMENGINE_LIB_ARGS_CABAL $SYMENGINE_INCLUDE_ARGS
+      cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS
       ;;
   esac
   set +ex
@@ -273,17 +292,17 @@ script:
   set -ex
   case "$BUILD" in
     stack)
-      stack --no-terminal $ARGS $SYMENGINE_LIB_ARGS_STACK $SYMENGINE_INCLUDE_ARGS test --haddock --no-haddock-deps
+      stack --no-terminal $ARGS $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS test --haddock --no-haddock-deps
       ;;
     cabal)
       cabal update
-      cabal configure --enable-tests --enable-benchmarks --ghc-options=-O0 $CABALARGS  $SYMENGINE_LIB_ARGS_CABAL $SYMENGINE_INCLUDE_ARGS
+      cabal configure --enable-tests --enable-benchmarks --ghc-options=-O0 $CABALARGS  $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS
       cabal build
       # run cabal test directly
       cabal test --show-details=always
 
       # install after building the library
-      # cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES $SYMENGINE_LIB_ARGS_CABAL $SYMENGINE_INCLUDE_ARGS
+      # cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES $SYMENGINE_LIB_ARGS $SYMENGINE_INCLUDE_ARGS
 
       ORIGDIR=$(pwd)
       for dir in $PACKAGES
