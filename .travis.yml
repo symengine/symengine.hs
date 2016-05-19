@@ -207,7 +207,7 @@ install:
    # $our_install_dir is exported by test_travis.sh from symengine
    set -ex
    export SYMENGINE_LIB_ARGS="--extra-lib-dirs=$our_install_dir/lib/"  
-   export SYMENGINE_INCLUDE_ARGS="--extra-include-dirs=$our_install_dir/include/ --extra-include-dirs=$our_install_dir/include/symengine/"
+   export SYMENGINE_INCLUDE_ARGS="--extra-include-dirs=$our_install_dir/include/"
    cd $TRAVIS_BUILD_DIR
 
 # GHC INSTALL PHASE
