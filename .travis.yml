@@ -176,11 +176,7 @@ install:
 # SYMENGINE INSTALL PHASE
 # -----------------------
 # Download and install SymEngine
-- |
-  set -ex
-  export our_install_dir=$HOME/symengine-install
-  mkdir -p $our_install_dir
-  cd $HOME && git clone https://github.com/symengine/symengine.git
+- cd $HOME && git clone https://github.com/symengine/symengine.git
  
 # Setup C compiler variables
 # The reason we need to do this is because our build system is haskell, so none of the 
