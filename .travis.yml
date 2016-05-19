@@ -178,8 +178,21 @@ install:
 # Download and install SymEngine
 - |
   set -ex
+  export our_install_dir=$HOME/symengine-install
+  mkdir -p $our_install_dir
   cd $HOME && git clone https://github.com/symengine/symengine.git
  
+# Setup C compiler variables
+# The reason we need to do this is because our build system is haskell, so none of the 
+# C variables are set.
+- |
+  if [ `uname` = "Darwin" ]
+  then
+    export CC="clang" && export CXX="clang++"
+  else
+    export CC="gcc" && export CXX="g++-4.7"  
+  fi
+
 - |
   set -ex
   export TEST_CPP="no"
@@ -190,11 +203,11 @@ install:
 # EXPORT PHASE
 # ------------
 # Export environment variables related to SymEngine's library and includes
-# $our_install_dir is configured by the install_travis.sh of Symengine
 - |
+   # $our_install_dir is exported by test_travis.sh from symengine
    set -ex
    export SYMENGINE_LIB_ARGS="--extra-lib-dirs=$our_install_dir/lib/"  
-   export SYMENGINE_INCLUDE_ARGS="--extra-include-dirs=$our_install_dir/include/"
+   export SYMENGINE_INCLUDE_ARGS="--extra-include-dirs=$our_install_dir/include/ --extra-include-dirs=$our_install_dir/include/symengine/"
    cd $TRAVIS_BUILD_DIR
 
 # GHC INSTALL PHASE
