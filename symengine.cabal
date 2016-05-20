@@ -15,29 +15,24 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
-  build-depends:       base
-  default-language:    Haskell2010
-
-executable symengine-exe
-  hs-source-dirs:      app
-  main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N 
-  include-dirs:        /usr/local/include/
-  extra-libraries:     symengine stdc++ gmpxx gmp
-  build-depends:       base >= 4.7 && < 5
-                     , symengine
+  exposed-modules:     Symengine
+  build-depends:       base >= 4.5.0 && <= 5
   default-language:    Haskell2010
 
 test-suite symengine-test
   type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
+  hs-source-dirs:      test, src
   main-is:             Spec.hs
-  build-depends:       base
-                     , symengine
+  build-depends:       base >= 4.5.0 && <= 5
+                     , symengine >= 0.1.1 && <= 0.2
+                     , tasty >= 0.10.0 && <= 0.13
+                     , tasty-hunit >= 0.9.0 && <= 1.5
+                     , tasty-quickcheck >= 0.8.0 && <= 1.5
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   include-dirs:        /usr/local/include/
   extra-libraries:     symengine stdc++ gmpxx gmp
+  
+  other-modules:       Symengine
 
   default-language:    Haskell2010
 
