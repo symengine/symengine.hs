@@ -170,6 +170,10 @@ symbol name = unsafePerformIO $ do
     free cname
     return s
 
+-- |Differentiate an expression with respect to a symbol
+diff :: BasicSym -> BasicSym -> BasicSym
+diff expr symbol = (basic_binaryop basic_diff_ffi) expr symbol
+
 instance Show BasicSym where
     show = basic_str 
 
@@ -229,7 +233,7 @@ foreign import ccall "symengine/cwrapper.h basic_str" basic_str_ffi :: Ptr Basic
 foreign import ccall "symengine/cwrapper.h basic_eq" basic_eq_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO Int
 
 foreign import ccall "symengine/cwrapper.h symbol_set" symbol_set_ffi :: Ptr BasicStruct -> CString -> IO ()
-
+foreign import ccall "symengine/cwrapper.h basic_diff" basic_diff_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO ()
 
 foreign import ccall "symengine/cwrapper.h integer_set_si" integer_set_si_ffi :: Ptr BasicStruct -> CLong -> IO ()
 
