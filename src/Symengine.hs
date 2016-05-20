@@ -8,13 +8,13 @@ module Symengine
     (
      ascii_art_str,
      basic_str,
-     basic_const_zero,
-     basic_const_one,
-     basic_const_I,
-     basic_const_pi,
-     basic_const_EulerGamma,
-     basic_const_minus_one,
-     basic_rational,
+     zero,
+     one,
+     const_I,
+     Symengine.pi,
+     e,
+     minus_one,
+     rational,
      BasicSym,
     ) where
 
@@ -39,6 +39,7 @@ instance Storable BasicStruct where
     peek basic_ptr = BasicStruct <$> peekByteOff basic_ptr 0
     poke basic_ptr BasicStruct{..} = pokeByteOff basic_ptr 0 data_ptr
 
+
 data BasicSym = BasicSym { fptr :: ForeignPtr BasicStruct }
 
 withBasicSym :: BasicSym -> (Ptr BasicStruct -> IO a) -> IO a
@@ -50,31 +51,28 @@ withBasicSym2 p1 p2 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> f p1 p2)
 withBasicSym3 :: BasicSym -> BasicSym -> BasicSym -> (Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO a) -> IO a
 withBasicSym3 p1 p2 p3 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> withBasicSym p3 (\p3 -> f p1 p2 p3)))
 
-instance Show BasicSym where
-    show = basic_str 
+
+zero :: BasicSym
+zero = basic_obj_constructor basic_const_zero_ffi
 
 
-basic_const_zero :: BasicSym
-basic_const_zero = basic_obj_constructor basic_const_zero_ffi
+one :: BasicSym
+one = basic_obj_constructor basic_const_one_ffi
 
+minus_one :: BasicSym
+minus_one = basic_obj_constructor basic_const_minus_one_ffi
 
-basic_const_one :: BasicSym
-basic_const_one = basic_obj_constructor basic_const_one_ffi
+const_I :: BasicSym
+const_I = basic_obj_constructor basic_const_I_ffi
 
-basic_const_minus_one :: BasicSym
-basic_const_minus_one = basic_obj_constructor basic_const_minus_one_ffi
+pi :: BasicSym
+pi = basic_obj_constructor basic_const_pi_ffi
 
-basic_const_I :: BasicSym
-basic_const_I = basic_obj_constructor basic_const_I_ffi
+e :: BasicSym
+e = basic_obj_constructor basic_const_E_ffi
 
-basic_const_pi :: BasicSym
-basic_const_pi = basic_obj_constructor basic_const_pi_ffi
-
-basic_const_E :: BasicSym
-basic_const_E = basic_obj_constructor basic_const_E_ffi
-
-basic_const_EulerGamma :: BasicSym
-basic_const_EulerGamma = basic_obj_constructor basic_const_EulerGamma_ffi
+eulerGamma :: BasicSym
+eulerGamma = basic_obj_constructor basic_const_EulerGamma_ffi
 
 basic_obj_constructor :: (Ptr BasicStruct -> IO ()) -> BasicSym
 basic_obj_constructor init_fn = unsafePerformIO $ do
@@ -137,8 +135,8 @@ basic_unaryop f a = unsafePerformIO $ do
 basic_pow :: BasicSym -> BasicSym -> BasicSym
 basic_pow = basic_binaryop basic_pow_ffi
 
-basic_rational :: BasicSym -> BasicSym -> BasicSym
-basic_rational = basic_binaryop rational_set_ffi
+rational :: BasicSym -> BasicSym -> BasicSym
+rational = basic_binaryop rational_set_ffi
 
 basic_rational_from_integer :: Integer -> Integer -> BasicSym
 basic_rational_from_integer i j = unsafePerformIO $ do
@@ -146,6 +144,14 @@ basic_rational_from_integer i j = unsafePerformIO $ do
     withBasicSym s (\s -> rational_set_si_ffi s (integerToCLong i) (integerToCLong j))
     return s 
 
+
+instance Show BasicSym where
+    show = basic_str 
+
+instance Eq BasicSym where
+    (==) a b = unsafePerformIO $ do 
+                i <- withBasicSym2 a b basic_eq_ffi
+                return $ i == 1
 
 
 instance Num BasicSym where
@@ -160,10 +166,10 @@ instance Num BasicSym where
 instance Fractional BasicSym where
     (/) = basic_binaryop basic_div_ffi
     fromRational (num :% denom) = basic_rational_from_integer num denom
-    recip r = basic_const_one / r
+    recip r = one / r
 
 instance Floating BasicSym where
-    pi = basic_const_pi
+    pi = Symengine.pi
     --exp :: basic_binaryop basic_pow_ffi
     log = undefined
     sqrt x =  basic_pow x 0.5
@@ -195,6 +201,7 @@ foreign import ccall "symengine/cwrapper.h basic_const_pi" basic_const_pi_ffi ::
 foreign import ccall "symengine/cwrapper.h basic_const_E" basic_const_E_ffi :: Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_const_EulerGamma" basic_const_EulerGamma_ffi :: Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_str" basic_str_ffi :: Ptr BasicStruct -> IO CString
+foreign import ccall "symengine/cwrapper.h basic_eq" basic_eq_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO Int
 
 foreign import ccall "symengine/cwrapper.h integer_set_si" integer_set_si_ffi :: Ptr BasicStruct -> CLong -> IO ()
 
