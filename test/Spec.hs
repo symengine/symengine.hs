@@ -7,6 +7,7 @@ import Data.Ord
 import Data.Monoid
 
 import Symengine as Sym
+import Prelude hiding (pi)
 
 main = defaultMain tests
 
@@ -29,10 +30,24 @@ unitTests = testGroup "Unit tests"
 
     , HU.testCase "Basic Constructors" $
     do
-      let zero = basic_const_zero
-      let one = basic_const_one
-      let minus_one = basic_const_minus_one
       "0" @?= (show zero)     
       "1" @?= (show one)     
-      "-1" @?= (show minus_one)     
+      "-1" @?= (show minus_one)
+    , HU.testCase "Basic Trignometric Functions" $
+    do
+      let pi_over_3 = pi / 3 :: BasicSym
+      let pi_over_2 = pi / 2 :: BasicSym
+
+      sin zero @?= zero
+      cos zero @?= one
+      
+      sin (pi / 6) @?= 1 / 2
+      sin (pi / 3) @?= 3 ** 0.5 / 2
+
+      cos (pi / 6) @?= 3 ** 0.5 / 2
+      cos (pi / 3) @?= 1 / 2 
+
+      sin pi_over_2 @?= one
+      cos pi_over_2 @?= zero
+
   ]
