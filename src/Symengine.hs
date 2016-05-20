@@ -14,7 +14,7 @@ module Symengine
      basic_const_pi,
      basic_const_EulerGamma,
      basic_const_minus_one,
-     basic_int_signed,
+     basic_rational,
      BasicSym,
     ) where
 
@@ -137,17 +137,11 @@ basic_unaryop f a = unsafePerformIO $ do
 basic_pow :: BasicSym -> BasicSym -> BasicSym
 basic_pow = basic_binaryop basic_pow_ffi
 
-basic_neg :: BasicSym -> BasicSym
-basic_neg = basic_unaryop basic_neg_ffi
+basic_rational :: BasicSym -> BasicSym -> BasicSym
+basic_rational = basic_binaryop rational_set_ffi
 
-basic_abs :: BasicSym -> BasicSym
-basic_abs = basic_unaryop basic_abs_ffi
-
-basic_rational_set :: BasicSym -> BasicSym -> BasicSym
-basic_rational_set = basic_binaryop rational_set_ffi
-
-basic_rational_set_signed :: Integer -> Integer -> BasicSym
-basic_rational_set_signed i j = unsafePerformIO $ do
+basic_rational_from_integer :: Integer -> Integer -> BasicSym
+basic_rational_from_integer i j = unsafePerformIO $ do
     s <- create_basic_ptr
     withBasicSym s (\s -> rational_set_si_ffi s (integerToCLong i) (integerToCLong j))
     return s 
@@ -165,7 +159,7 @@ instance Num BasicSym where
 
 instance Fractional BasicSym where
     (/) = basic_binaryop basic_div_ffi
-    fromRational (num :% denom) = basic_rational_set_signed num denom
+    fromRational (num :% denom) = basic_rational_from_integer num denom
     recip r = basic_const_one / r
 
 instance Floating BasicSym where
