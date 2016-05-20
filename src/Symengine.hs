@@ -7,7 +7,6 @@ Description : Symengine bindings to Haskell
 module Symengine
     (
      ascii_art_str,
-     basic_str,
      zero,
      one,
      im,
@@ -43,6 +42,18 @@ instance Storable BasicStruct where
     poke basic_ptr BasicStruct{..} = pokeByteOff basic_ptr 0 data_ptr
 
 
+-- |represents a symbol exported by SymEngine. create this using the functions
+-- 'zero', 'one', 'minus_one', 'e', 'im', 'rational', 'complex', and also by
+-- constructing a number and converting it to a Symbol
+-- 
+-- >>> 3.5 :: BasicSym
+-- 7/2
+--
+-- >>> rational 2 10
+-- 1 /5
+--
+-- >>> complex 1 2
+-- 1 + 2*I
 data BasicSym = BasicSym { fptr :: ForeignPtr BasicStruct }
 
 withBasicSym :: BasicSym -> (Ptr BasicStruct -> IO a) -> IO a
