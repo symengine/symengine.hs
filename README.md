@@ -15,7 +15,7 @@ Stack is a Haskell build tool, which allows for cross-platform, reproducible bui
 The build toolchain of this project depends on `stack`, so please follow the installation
 instructions as [outlined here](http://docs.haskellstack.org/en/stable/README/#how-to-install)
 
-### [SymEngine](), the library that this package provides a Haskell interface for
+### SymEngine, the library that this package provides a Haskell interface for
 
 Please go through the `SymEngine` installation instructions, and make sure that the header files
 as well as the libraries

@@ -134,18 +134,6 @@ basic_unaryop f a = unsafePerformIO $ do
     return s 
 
 
-basic_add :: BasicSym -> BasicSym -> BasicSym
-basic_add = basic_binaryop basic_add_ffi
- 
-basic_sub :: BasicSym -> BasicSym -> BasicSym
-basic_sub = basic_binaryop basic_sub_ffi
-
-basic_mul :: BasicSym -> BasicSym -> BasicSym
-basic_mul = basic_binaryop basic_mul_ffi
-
-basic_div :: BasicSym -> BasicSym -> BasicSym
-basic_div = basic_binaryop basic_div_ffi
-
 basic_pow :: BasicSym -> BasicSym -> BasicSym
 basic_pow = basic_binaryop basic_pow_ffi
 
@@ -167,18 +155,38 @@ basic_rational_set_signed i j = unsafePerformIO $ do
 
 
 instance Num BasicSym where
-    (+) = basic_add
-    (-) = basic_sub
-    (*) = basic_mul
-    negate = basic_neg
-    abs = basic_abs
+    (+) = basic_binaryop basic_add_ffi
+    (-) = basic_binaryop basic_sub_ffi
+    (*) = basic_binaryop basic_mul_ffi
+    negate = basic_unaryop basic_neg_ffi
+    abs = basic_unaryop basic_abs_ffi
     signum = undefined
     fromInteger = basic_from_integer
 
 instance Fractional BasicSym where
-    (/) = basic_div
+    (/) = basic_binaryop basic_div_ffi
     fromRational (num :% denom) = basic_rational_set_signed num denom
     recip r = basic_const_one / r
+
+instance Floating BasicSym where
+    pi = basic_const_pi
+    --exp :: basic_binaryop basic_pow_ffi
+    log = undefined
+    sqrt x =  basic_pow x 0.5
+    (**) = basic_pow
+    logBase = undefined
+    sin = basic_unaryop basic_sin_ffi
+    cos = basic_unaryop basic_cos_ffi
+    tan = basic_unaryop basic_tan_ffi
+    asin = basic_unaryop basic_asin_ffi
+    acos = basic_unaryop basic_acos_ffi
+    atan = basic_unaryop basic_atan_ffi
+    sinh = basic_unaryop basic_sinh_ffi
+    cosh = basic_unaryop basic_cosh_ffi
+    tanh = basic_unaryop basic_tanh_ffi
+    asinh = basic_unaryop basic_asinh_ffi
+    acosh = basic_unaryop basic_acosh_ffi
+    atanh = basic_unaryop basic_atanh_ffi
 
 foreign import ccall "symengine/cwrapper.h ascii_art_str" ascii_art_str_ffi :: IO CString
 foreign import ccall "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: Ptr BasicStruct -> IO ()
@@ -206,3 +214,19 @@ foreign import ccall "symengine/cwrapper.h basic_div" basic_div_ffi :: Ptr Basic
 foreign import ccall "symengine/cwrapper.h basic_pow" basic_pow_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_neg" basic_neg_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_abs" basic_abs_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+
+foreign import ccall "symengine/cwrapper.h basic_sin" basic_sin_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_cos" basic_cos_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_tan" basic_tan_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+
+foreign import ccall "symengine/cwrapper.h basic_asin" basic_asin_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_acos" basic_acos_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_atan" basic_atan_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+
+foreign import ccall "symengine/cwrapper.h basic_sinh" basic_sinh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_cosh" basic_cosh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_tanh" basic_tanh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+
+foreign import ccall "symengine/cwrapper.h basic_asinh" basic_asinh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_acosh" basic_acosh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_atanh" basic_atanh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
