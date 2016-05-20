@@ -20,8 +20,8 @@ tests = testGroup "Tests" [unitTests]
 -- properties :: TestTree
 -- properties = testGroup "Properties" [qcProps]
 
-unitTests = testGroup "FFI Sanity Checks"
-  [ HU.testCase "ASCII Art should be non-empty" $ 
+unitTests = testGroup "Unit tests"
+  [ HU.testCase "FFI Sanity Check - ASCII Art should be non-empty" $ 
     do
       ascii_art <- Sym.ascii_art_str
       HU.assertBool "ASCII art from ascii_art_str is empty" (not . null $ ascii_art)
@@ -29,10 +29,10 @@ unitTests = testGroup "FFI Sanity Checks"
 
     , HU.testCase "Basic Constructors" $
     do
-      zero <- basic_const_zero
-      one <- basic_const_one
-      minus_one <- basic_const_minus_one
-      "0" @?= (show 0)     
+      let zero = basic_const_zero
+      let one = basic_const_one
+      let minus_one = basic_const_minus_one
+      "0" @?= (show zero)     
       "1" @?= (show one)     
       "-1" @?= (show minus_one)     
   ]
