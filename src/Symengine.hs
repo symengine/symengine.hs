@@ -10,11 +10,13 @@ module Symengine
      basic_str,
      zero,
      one,
-     const_I,
+     im,
      Symengine.pi,
      e,
      minus_one,
      rational,
+     complex,
+     symbol,
      BasicSym,
     ) where
 
@@ -23,6 +25,7 @@ import Foreign.Ptr
 import Foreign.C.String
 import Foreign.Storable
 import Foreign.Marshal.Array
+import Foreign.Marshal.Alloc
 import Foreign.ForeignPtr
 import Control.Applicative
 import System.IO.Unsafe
@@ -52,24 +55,33 @@ withBasicSym3 :: BasicSym -> BasicSym -> BasicSym -> (Ptr BasicStruct -> Ptr Bas
 withBasicSym3 p1 p2 p3 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> withBasicSym p3 (\p3 -> f p1 p2 p3)))
 
 
+-- | constructor for 0
 zero :: BasicSym
 zero = basic_obj_constructor basic_const_zero_ffi
 
-
+-- | constructor for 1
 one :: BasicSym
 one = basic_obj_constructor basic_const_one_ffi
 
+-- | constructor for -1
 minus_one :: BasicSym
 minus_one = basic_obj_constructor basic_const_minus_one_ffi
 
-const_I :: BasicSym
-const_I = basic_obj_constructor basic_const_I_ffi
+-- | constructor for i = sqrt(-1)
+im :: BasicSym
+im = basic_obj_constructor basic_const_I_ffi
 
+-- | the ratio of the circumference of a circle to its radius
 pi :: BasicSym
 pi = basic_obj_constructor basic_const_pi_ffi
 
+-- | The base of the natural logarithm
 e :: BasicSym
 e = basic_obj_constructor basic_const_E_ffi
+
+expand :: BasicSym -> BasicSym
+expand = basic_unaryop basic_expand_ffi
+
 
 eulerGamma :: BasicSym
 eulerGamma = basic_obj_constructor basic_const_EulerGamma_ffi
@@ -135,8 +147,13 @@ basic_unaryop f a = unsafePerformIO $ do
 basic_pow :: BasicSym -> BasicSym -> BasicSym
 basic_pow = basic_binaryop basic_pow_ffi
 
+-- |Create a rational number with numerator and denominator
 rational :: BasicSym -> BasicSym -> BasicSym
 rational = basic_binaryop rational_set_ffi
+
+-- |Create a complex number a + b * im
+complex :: BasicSym -> BasicSym -> BasicSym
+complex a b = (basic_binaryop complex_set_ffi) a b
 
 basic_rational_from_integer :: Integer -> Integer -> BasicSym
 basic_rational_from_integer i j = unsafePerformIO $ do
@@ -144,6 +161,14 @@ basic_rational_from_integer i j = unsafePerformIO $ do
     withBasicSym s (\s -> rational_set_si_ffi s (integerToCLong i) (integerToCLong j))
     return s 
 
+-- |Create a symbol with the given name
+symbol :: String -> BasicSym
+symbol name = unsafePerformIO $ do
+    s <- create_basic_ptr
+    cname <- newCString name
+    withBasicSym s (\s -> symbol_set_ffi s cname)
+    free cname
+    return s
 
 instance Show BasicSym where
     show = basic_str 
@@ -170,9 +195,9 @@ instance Fractional BasicSym where
 
 instance Floating BasicSym where
     pi = Symengine.pi
-    --exp :: basic_binaryop basic_pow_ffi
+    exp x = e ** x
     log = undefined
-    sqrt x =  basic_pow x 0.5
+    sqrt x = x  ** 0.5
     (**) = basic_pow
     logBase = undefined
     sin = basic_unaryop basic_sin_ffi
@@ -203,10 +228,18 @@ foreign import ccall "symengine/cwrapper.h basic_const_EulerGamma" basic_const_E
 foreign import ccall "symengine/cwrapper.h basic_str" basic_str_ffi :: Ptr BasicStruct -> IO CString
 foreign import ccall "symengine/cwrapper.h basic_eq" basic_eq_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO Int
 
+foreign import ccall "symengine/cwrapper.h symbol_set" symbol_set_ffi :: Ptr BasicStruct -> CString -> IO ()
+
+
 foreign import ccall "symengine/cwrapper.h integer_set_si" integer_set_si_ffi :: Ptr BasicStruct -> CLong -> IO ()
 
 foreign import ccall "symengine/cwrapper.h rational_set" rational_set_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h rational_set_si" rational_set_si_ffi :: Ptr BasicStruct -> CLong -> CLong -> IO ()
+
+foreign import ccall "symengine/cwrapper.h complex_set" complex_set_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+
+foreign import ccall "symengine/cwrapper.h basic_expand" basic_expand_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+
 
 foreign import ccall "symengine/cwrapper.h basic_add" basic_add_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_sub" basic_sub_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO ()
