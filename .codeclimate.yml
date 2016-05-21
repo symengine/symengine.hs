@@ -1,8 +1,7 @@
----
+# Enable HLint for haskell at CodeClimate
 engines:
-  fixme:
+  hlint:
     enabled: true
 ratings:
-  paths: []
-exclude_paths:
-- test/
+  paths:
+  - "**.hs"
