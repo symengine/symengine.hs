@@ -212,7 +212,7 @@ instance Floating BasicSym where
     pi = Symengine.pi
     exp x = e ** x
     log = undefined
-    sqrt x = x  ** 0.5
+    sqrt x = x  ** 1/2
     (**) = basic_pow
     logBase = undefined
     sin = basic_unaryop basic_sin_ffi

@@ -42,9 +42,9 @@ unitTests = testGroup "Unit tests"
       cos zero @?= one
       
       sin (pi / 6) @?= 1 / 2
-      sin (pi / 3) @?= 3 ** 0.5 / 2
+      sin (pi / 3) @?= (3 ** (1/2)) / 2
 
-      cos (pi / 6) @?= 3 ** 0.5 / 2
+      cos (pi / 6) @?= (3 ** (1/2)) / 2
       cos (pi / 3) @?= 1 / 2 
 
       sin pi_over_2 @?= one
