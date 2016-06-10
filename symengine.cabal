@@ -1,5 +1,5 @@
 name:                symengine
-version:             0.1.1.0
+version:             0.1.2.0
 synopsis:            SymEngine symbolic mathematics engine for Haskell
 description:         Please see README.md
 homepage:            http://github.com/symengine/symengine.hs#readme
