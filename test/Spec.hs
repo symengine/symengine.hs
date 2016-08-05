@@ -49,9 +49,5 @@ unitTests = testGroup "Unit tests"
 
       sin pi_over_2 @?= one
       cos pi_over_2 @?= zero
-    , HU.testCase "Basic predicate about an element" $
-    do
-      is_a_Number one @?= 1
-      is_a_Symbol one @?= 0
 
   ]
