@@ -12,7 +12,7 @@ import Prelude hiding (pi)
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [unitTests]
+tests = testGroup "Tests" [unitTests, vectorTests]
 
 
 -- These are used to check invariants that can be tested by creating
@@ -51,3 +51,13 @@ unitTests = testGroup "Unit tests"
       cos pi_over_2 @?= zero
 
   ]
+
+vectorTests = testGroup "Vector"
+    [ HU.testCase "Vector - create, push_back, get out value" $ 
+      do
+        v <- vecbasic_new_ffi -- HACK
+        vecbasic_push_back v (10 :: BasicSym)
+        let value = vecbasic_get v 0
+
+        print $ "value: " ++ (show value)
+    ]

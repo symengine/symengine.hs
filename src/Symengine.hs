@@ -17,6 +17,10 @@ module Symengine
      complex,
      symbol,
      BasicSym,
+     vecbasic_new_ffi,
+     vecbasic_free_ffi,
+     vecbasic_push_back,
+     vecbasic_get,
     ) where
 
 import Foreign.C.Types
@@ -40,6 +44,8 @@ instance Storable BasicStruct where
     sizeOf _ = sizeOf nullPtr
     peek basic_ptr = BasicStruct <$> peekByteOff basic_ptr 0
     poke basic_ptr BasicStruct{..} = pokeByteOff basic_ptr 0 data_ptr
+
+
 
 
 -- |represents a symbol exported by SymEngine. create this using the functions
@@ -279,3 +285,23 @@ foreign import ccall "symengine/cwrapper.h basic_tanh" basic_tanh_ffi :: Ptr Bas
 foreign import ccall "symengine/cwrapper.h basic_asinh" basic_asinh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_acosh" basic_acosh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_atanh" basic_atanh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+
+-- vectors binding
+-- CRASHES 
+data CVecBasic = CVecBasic
+ 
+vecbasic_push_back :: Ptr CVecBasic -> BasicSym -> IO ()
+vecbasic_push_back vec sym =  withBasicSym sym (\p ->vecbasic_push_back_ffi vec p)
+
+
+vecbasic_get :: Ptr CVecBasic -> Int -> BasicSym
+vecbasic_get vec i = basic_obj_constructor (vecbasic_get_ffi vec i)
+
+foreign import ccall "symengine/cwrapper.h vecbasic_new" vecbasic_new_ffi :: IO (Ptr CVecBasic)
+foreign import ccall "symengine/cwrapper.h vecbasic_push_back" vecbasic_push_back_ffi :: Ptr CVecBasic -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h vecbasic_get" vecbasic_get_ffi :: Ptr CVecBasic -> Int -> Ptr BasicStruct -> IO ()
+foreign import ccall "symengine/cwrapper.h vecbasic_free" vecbasic_free_ffi :: Ptr CVecBasic -> IO ()
+
+
+
+
