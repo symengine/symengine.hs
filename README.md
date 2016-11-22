@@ -79,3 +79,12 @@ GHCi session with Symengine loaded
 # License
 
 All code is released under the [MIT License](https://github.com/symengine/symengine.hs/blob/master/LICENSE).
+
+
+# Things Learnt 
+
+* you can use `toEnum` to convert from `Int` to the `C<Int | Long | ..>` variants
+of C types
+
+* API design - how to best handle exceptions?
+
