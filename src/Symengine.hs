@@ -35,6 +35,13 @@ import System.IO.Unsafe
 import Control.Monad
 import GHC.Real
 
+data SymengineExceptions = NoException |
+                           RuntimeError |
+                           DivByZero |
+                           NotImplemented |
+                           DomainError |
+                           ParseError deriving (Show, Enum)
+
 data BasicStruct = BasicStruct {
     data_ptr :: Ptr ()
 }
@@ -117,7 +124,11 @@ integerToCLong i = CLong (fromInteger i)
 
 
 intToCLong :: Int -> CLong
-intToCLong i = integerToCLong (toInteger i)
+intToCLong i = toEnum i
+
+
+intToCInt :: Int -> CInt
+intToCInt i = toEnum i
 
 basic_int_signed :: Int -> BasicSym
 basic_int_signed i = unsafePerformIO $ do
@@ -198,7 +209,6 @@ instance Eq BasicSym where
     (==) a b = unsafePerformIO $ do 
                 i <- withBasicSym2 a b basic_eq_ffi
                 return $ i == 1
-
 
 instance Num BasicSym where
     (+) = basic_binaryop basic_add_ffi
@@ -301,7 +311,5 @@ foreign import ccall "symengine/cwrapper.h vecbasic_new" vecbasic_new_ffi :: IO 
 foreign import ccall "symengine/cwrapper.h vecbasic_push_back" vecbasic_push_back_ffi :: Ptr CVecBasic -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h vecbasic_get" vecbasic_get_ffi :: Ptr CVecBasic -> Int -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h vecbasic_free" vecbasic_free_ffi :: Ptr CVecBasic -> IO ()
-
-
 
 
