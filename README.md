@@ -68,13 +68,26 @@ GHCi session with Symengine loaded
 -1
 ```
 
-# Things to Do
+# Development
 
-`[TODO: fill this up]`
+clone `Symengine`, build it with the setting
 
-# Contributing
+```
+cmake -DBUILD_SHARED_LIBS:BOOL=ON
+```
 
-`[TODO: fill this up]`
+this makes sure that dynamically linked libraries are being built, so we can
+link to them.
+
+
+to test changes, use
+```
+stack test --force-dirty
+```
+
+the `--force-dirty` ensures that the library and the test builds are both
+rebuilt.
+
 
 # License
 

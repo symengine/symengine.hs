@@ -51,13 +51,21 @@ unitTests = testGroup "Unit tests"
       cos pi_over_2 @?= zero
 
   ]
-
+--
+-- tests for vectors
 vectorTests = testGroup "Vector"
     [ HU.testCase "Vector - create, push_back, get out value" $ 
       do
         v <- vecbasic_new_ffi -- HACK
-        vecbasic_push_back v (10 :: BasicSym)
-        let value = vecbasic_get v 0
-
-        print $ "value: " ++ (show value)
+        vecbasic_push_back v (11 :: BasicSym)
+        vecbasic_push_back v (12 :: BasicSym)
+        vecbasic_push_back v (13 :: BasicSym)
+        vecbasic_push_back v (14 :: BasicSym)
+        vecbasic_push_back v (15 :: BasicSym)
+        vecbasic_push_back v (16 :: BasicSym)
+        vecbasic_push_back v (17 :: BasicSym)
+      
+        vecbasic_get v 0 @?= Right (11 :: BasicSym)
+        vecbasic_get v 1 @?= Right (12 :: BasicSym)
+        vecbasic_get v 100 @?= Left RuntimeError
     ]
