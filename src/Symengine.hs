@@ -17,8 +17,8 @@ module Symengine
      complex,
      symbol,
      BasicSym,
-     vecbasic_new_ffi,
-     vecbasic_free_ffi,
+     VecBasic,
+     vecbasic_new,
      vecbasic_push_back,
      vecbasic_get,
      SymengineException(NoException, RuntimeError, DivByZero, NotImplemented, DomainError, ParseError)
@@ -50,13 +50,6 @@ cIntToEnum = toEnum . fromIntegral
 cIntFromEnum :: Enum a => a -> CInt
 cIntFromEnum = fromIntegral . fromEnum
 
--- cIntConv = fromIntegral
-
--- cFloatConv :: (Real a, Fractional b) => a -> b
--- cFloatConv = realToFrac
-
-
-
 data BasicStruct = BasicStruct {
     data_ptr :: Ptr ()
 }
@@ -66,7 +59,6 @@ instance Storable BasicStruct where
     sizeOf _ = sizeOf nullPtr
     peek basic_ptr = BasicStruct <$> peekByteOff basic_ptr 0
     poke basic_ptr BasicStruct{..} = pokeByteOff basic_ptr 0 data_ptr
-
 
 
 
@@ -312,25 +304,52 @@ foreign import ccall "symengine/cwrapper.h basic_acosh" basic_acosh_ffi :: Ptr B
 foreign import ccall "symengine/cwrapper.h basic_atanh" basic_atanh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
 
 -- vectors binding
--- CRASHES 
 data CVecBasic = CVecBasic
- 
-vecbasic_push_back :: Ptr CVecBasic -> BasicSym -> IO ()
-vecbasic_push_back vec sym =  withBasicSym sym (\p ->vecbasic_push_back_ffi vec p)
+
+withVecBasic :: VecBasic -> (Ptr CVecBasic -> IO a) -> IO a
+withVecBasic v f = withForeignPtr (vecfptr v) f
+
+-- | push back an element into a vector
+vecbasic_push_back :: VecBasic -> BasicSym -> IO ()
+vecbasic_push_back vec sym =  withVecBasic vec (\v -> withBasicSym sym (\p ->vecbasic_push_back_ffi v p))
 
 
-vecbasic_get :: Ptr CVecBasic -> Int -> Either SymengineException BasicSym
+-- | get the i'th element out of a vecbasic
+vecbasic_get :: VecBasic -> Int -> Either SymengineException BasicSym
 vecbasic_get vec i = unsafePerformIO $ do
   basicsym <- create_basicsym
-  exception <- cIntToEnum <$> withBasicSym basicsym (\bs -> vecbasic_get_ffi vec i bs)
+  exception <- cIntToEnum <$> withVecBasic vec (\v -> withBasicSym basicsym (\bs -> vecbasic_get_ffi v i bs))
   --exception <- toEnum <$> withBasicSym basicsym (\bs -> vecbasic_get_ffi vec i bs)
   case exception of
     NoException -> return (Right basicsym)
     _ -> return (Left exception)
 
+-- | Represents a Vector of BasicSym
+-- | usually, end-users are not expected to interact directly with VecBasic
+-- | this should at some point be moved to Symengine.Internal
+data VecBasic = VecBasic { vecfptr :: ForeignPtr CVecBasic }
+
+-- | Create a new VecBasic
+vecbasic_new :: IO VecBasic
+vecbasic_new = do
+    ptr <- vecbasic_new_ffi
+    finalized <- newForeignPtr vecbasic_free_ffi ptr
+    return $ VecBasic (finalized)
+
 foreign import ccall "symengine/cwrapper.h vecbasic_new" vecbasic_new_ffi :: IO (Ptr CVecBasic)
 foreign import ccall "symengine/cwrapper.h vecbasic_push_back" vecbasic_push_back_ffi :: Ptr CVecBasic -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h vecbasic_get" vecbasic_get_ffi :: Ptr CVecBasic -> Int -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h vecbasic_free" vecbasic_free_ffi :: Ptr CVecBasic -> IO ()
+foreign import ccall "symengine/cwrapper.h &vecbasic_free" vecbasic_free_ffi :: FunPtr (Ptr CVecBasic -> IO ())
 
+
+
+-- Dense Matrices
+data CDenseMatrix = CDenseMatrix
+data DenseMatrix = DenseMatrix { densefptr :: ForeignPtr CDenseMatrix}
+
+withDenseMatrix :: DenseMatrix -> (CDenseMatrix -> IO a) -> IO a
+withDenseMatrix dm f = withForeignPtr (densefptr dm) f
+
+foreign import ccall "symengine/cwrapper.h dense_matrix_new" cdensematrix_new_ffi :: IO (Ptr CDenseMatrix)
+foreign import ccall "symengine/cwrapper.h dense_matrix_free" cdensematrix_free_ffi :: (Ptr CDenseMatrix) -> IO ()
 
