@@ -12,7 +12,7 @@ import Prelude hiding (pi)
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [unitTests, vectorTests]
+tests = testGroup "Tests" [unitTests, vectorTests, denseMatrixTests]
 
 
 -- These are used to check invariants that can be tested by creating
