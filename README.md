@@ -100,4 +100,3 @@ All code is released under the [MIT License](https://github.com/symengine/symeng
 of C types
 
 * API design - how to best handle exceptions?
-
