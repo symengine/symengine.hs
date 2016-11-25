@@ -22,6 +22,7 @@ module Symengine
      vecbasic_new,
      vecbasic_push_back,
      vecbasic_get,
+     vecbasic_size,
      -- Dense matrices
      DenseMatrix,
      densematrix_new,
@@ -327,13 +328,18 @@ vecbasic_push_back vec sym =  withVecBasic vec (\v -> withBasicSym sym (\p ->vec
 
 -- | get the i'th element out of a vecbasic
 vecbasic_get :: VecBasic -> Int -> Either SymengineException BasicSym
-vecbasic_get vec i = unsafePerformIO $ do
-  basicsym <- create_basicsym
-  exception <- cIntToEnum <$> withVecBasic vec (\v -> withBasicSym basicsym (\bs -> vecbasic_get_ffi v i bs))
-  --exception <- toEnum <$> withBasicSym basicsym (\bs -> vecbasic_get_ffi vec i bs)
-  case exception of
-    NoException -> return (Right basicsym)
-    _ -> return (Left exception)
+vecbasic_get vec i =
+  if i >= 0 && i < vecbasic_size vec
+  then 
+    unsafePerformIO $ do
+    basicsym <- create_basicsym
+    exception <- cIntToEnum <$> withVecBasic vec (\v -> withBasicSym basicsym (\bs -> vecbasic_get_ffi v i bs))
+    --exception <- toEnum <$> withBasicSym basicsym (\bs -> vecbasic_get_ffi vec i bs)
+    case exception of
+      NoException -> return (Right basicsym)
+      _ -> return (Left exception)
+  else
+    Left RuntimeError
 
 
 -- | Create a new VecBasic
@@ -350,9 +356,14 @@ list_to_vecbasic syms = do
   forM_ syms (\s -> vecbasic_push_back vec s)
   return vec
 
+vecbasic_size :: VecBasic -> Int
+vecbasic_size vec = unsafePerformIO $ 
+  fromIntegral <$> withVecBasic vec vecbasic_size_ffi
+
 foreign import ccall "symengine/cwrapper.h vecbasic_new" vecbasic_new_ffi :: IO (Ptr CVecBasic)
 foreign import ccall "symengine/cwrapper.h vecbasic_push_back" vecbasic_push_back_ffi :: Ptr CVecBasic -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h vecbasic_get" vecbasic_get_ffi :: Ptr CVecBasic -> Int -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h vecbasic_size" vecbasic_size_ffi :: Ptr CVecBasic -> IO CSize
 foreign import ccall "symengine/cwrapper.h &vecbasic_free" vecbasic_free_ffi :: FunPtr (Ptr CVecBasic -> IO ())
 
 
