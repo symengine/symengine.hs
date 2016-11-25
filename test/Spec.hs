@@ -66,4 +66,10 @@ vectorTests = testGroup "Vector"
 
 
 -- tests for dense matrices
-denstMatrixTests = testGroup "Dense Matrix" []
+denseMatrixTests = testGroup "Dense Matrix" 
+  [ HU.testCase "Create matrix and display" $ 
+    do
+      let syms = [one, one, one, zero]
+      mat <- densematrix_new_vec 2 2 syms
+      show mat @?= "[1, 1]\n[1, 0]\n"
+  ]

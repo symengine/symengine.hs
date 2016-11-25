@@ -22,9 +22,10 @@ module Symengine
      vecbasic_new,
      vecbasic_push_back,
      vecbasic_get,
-     -- matrices
+     -- Dense matrices
      DenseMatrix,
      densematrix_new,
+     densematrix_new_vec,
      SymengineException(NoException, RuntimeError, DivByZero, NotImplemented, DomainError, ParseError)
     ) where
 
