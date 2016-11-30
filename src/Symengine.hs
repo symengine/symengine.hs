@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 {-|
 Module      : Symengine
@@ -57,22 +58,17 @@ cIntToEnum = toEnum . fromIntegral
 cIntFromEnum :: Enum a => a -> CInt
 cIntFromEnum = fromIntegral . fromEnum
 
-{-
-data CBasicSym = CBasicSym {
-    data_ptr :: Ptr ()
-}
--}
+
+class Wrapped o i | o -> i where
+  with :: o -> (Ptr i -> IO a) -> IO a
+
+with2 :: Wrapped o1 i1 => Wrapped o2 i2 => o1 -> o2 -> (Ptr i1 -> Ptr i2 -> IO a) -> IO a
+with2 o1 o2 f = with o1 (\p1 -> with o2 (\p2 -> f p1 p2))
+
+with3 :: Wrapped o1 i1 => Wrapped o2 i2 => Wrapped o3 i3 => o1 -> o2 -> o3 -> (Ptr i1 -> Ptr i2 -> Ptr i3 -> IO a) -> IO a
+with3 o1 o2 o3 f = with2 o1 o2 (\p1 p2 -> with o3 (\p3 -> f p1 p2 p3))
 
 data CBasicSym = CBasicSym
-
-{-
-instance Storable CBasicSym where
-    alignment _ = 8
-    sizeOf _ = sizeOf nullPtr
-    peek basic_ptr = CBasicSym <$> peekByteOff basic_ptr 0
-    poke basic_ptr CBasicSym{..} = pokeByteOff basic_ptr 0 data_ptr
--}
-
 
 -- |represents a symbol exported by SymEngine. create this using the functions
 -- 'zero', 'one', 'minus_one', 'e', 'im', 'rational', 'complex', and also by
@@ -87,7 +83,10 @@ instance Storable CBasicSym where
 -- >>> complex 1 2
 -- 1 + 2*I
 newtype BasicSym = BasicSym (ForeignPtr CBasicSym)
-
+instance Wrapped BasicSym CBasicSym where
+  with (BasicSym (p)) f = withForeignPtr p f
+  
+ {-
 withBasicSym :: BasicSym -> (Ptr CBasicSym -> IO a) -> IO a
 withBasicSym (BasicSym ptr) = withForeignPtr ptr
 
@@ -96,6 +95,7 @@ withBasicSym2 p1 p2 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> f p1 p2)
 
 withBasicSym3 :: BasicSym -> BasicSym -> BasicSym -> (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> IO a
 withBasicSym3 p1 p2 p3 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> withBasicSym p3 (\p3 -> f p1 p2 p3)))
+-}
 
 -- | constructor for 0
 zero :: BasicSym
@@ -131,11 +131,11 @@ eulerGamma = basic_obj_constructor basic_const_EulerGamma_ffi
 basic_obj_constructor :: (Ptr CBasicSym -> IO ()) -> BasicSym
 basic_obj_constructor init_fn = unsafePerformIO $ do
     basic_ptr <- basicsym_new
-    withBasicSym basic_ptr init_fn
+    with basic_ptr init_fn
     return basic_ptr
 
 basic_str :: BasicSym -> String
-basic_str basic_ptr = unsafePerformIO $ withBasicSym basic_ptr (basic_str_ffi >=> peekCString)
+basic_str basic_ptr = unsafePerformIO $ with basic_ptr (basic_str_ffi >=> peekCString)
 
 integerToCLong :: Integer -> CLong
 integerToCLong i = CLong (fromInteger i)
@@ -151,14 +151,14 @@ intToCInt i = toEnum i
 basic_int_signed :: Int -> BasicSym
 basic_int_signed i = unsafePerformIO $ do
     iptr <- basicsym_new
-    withBasicSym iptr (\iptr -> integer_set_si_ffi iptr (intToCLong i) )
+    with iptr (\iptr -> integer_set_si_ffi iptr (intToCLong i) )
     return iptr
 
 
 basic_from_integer :: Integer -> BasicSym
 basic_from_integer i = unsafePerformIO $ do
     iptr <- basicsym_new
-    withBasicSym iptr (\iptr -> integer_set_si_ffi iptr (fromInteger i))
+    with iptr (\iptr -> integer_set_si_ffi iptr (fromInteger i))
     return iptr
 
 -- |The `ascii_art_str` function prints SymEngine in ASCII art.
@@ -179,13 +179,13 @@ basicsym_new = do
 basic_binaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym -> BasicSym
 basic_binaryop f a b = unsafePerformIO $ do
     s <- basicsym_new
-    withBasicSym3 s a b f
+    with3 s a b f
     return s
 
 basic_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym
 basic_unaryop f a = unsafePerformIO $ do
     s <- basicsym_new
-    withBasicSym2 s a f
+    with2 s a f
     return s
 
 
@@ -203,7 +203,7 @@ complex a b = (basic_binaryop complex_set_ffi) a b
 basic_rational_from_integer :: Integer -> Integer -> BasicSym
 basic_rational_from_integer i j = unsafePerformIO $ do
     s <- basicsym_new
-    withBasicSym s (\s -> rational_set_si_ffi s (integerToCLong i) (integerToCLong j))
+    with s (\s -> rational_set_si_ffi s (integerToCLong i) (integerToCLong j))
     return s 
 
 -- |Create a symbol with the given name
@@ -211,7 +211,7 @@ symbol :: String -> BasicSym
 symbol name = unsafePerformIO $ do
     s <- basicsym_new
     cname <- newCString name
-    withBasicSym s (\s -> symbol_set_ffi s cname)
+    with s (\s -> symbol_set_ffi s cname)
     free cname
     return s
 
@@ -220,11 +220,11 @@ diff :: BasicSym -> BasicSym -> BasicSym
 diff expr symbol = (basic_binaryop basic_diff_ffi) expr symbol
 
 instance Show BasicSym where
-    show = basic_str 
+    show = basic_str
 
 instance Eq BasicSym where
-    (==) a b = unsafePerformIO $ do 
-                i <- withBasicSym2 a b basic_eq_ffi
+    (==) a b = unsafePerformIO $ do
+                i <- with2 a b basic_eq_ffi
                 return $ i == 1
 
 instance Num BasicSym where
@@ -319,14 +319,15 @@ data CVecBasic = CVecBasic
 -- | Represents a Vector of BasicSym
 -- | usually, end-users are not expected to interact directly with VecBasic
 -- | this should at some point be moved to Symengine.Internal
-data VecBasic = VecBasic { vecfptr :: ForeignPtr CVecBasic }
+newtype VecBasic = VecBasic (ForeignPtr CVecBasic)
 
-withVecBasic :: VecBasic -> (Ptr CVecBasic -> IO a) -> IO a
-withVecBasic v f = withForeignPtr (vecfptr v) f
+instance Wrapped VecBasic CVecBasic where
+    with (VecBasic p) f = withForeignPtr p f
+
 
 -- | push back an element into a vector
 vecbasic_push_back :: VecBasic -> BasicSym -> IO ()
-vecbasic_push_back vec sym =  withVecBasic vec (\v -> withBasicSym sym (\p ->vecbasic_push_back_ffi v p))
+vecbasic_push_back vec sym =  with2 vec sym (\v p ->vecbasic_push_back_ffi v p)
 
 
 -- | get the i'th element out of a vecbasic
@@ -335,11 +336,10 @@ vecbasic_get vec i =
   if i >= 0 && i < vecbasic_size vec
   then 
     unsafePerformIO $ do
-    basicsym <- basicsym_new
-    exception <- cIntToEnum <$> withVecBasic vec (\v -> withBasicSym basicsym (\bs -> vecbasic_get_ffi v i bs))
-    --exception <- toEnum <$> withBasicSym basicsym (\bs -> vecbasic_get_ffi vec i bs)
+    sym <- basicsym_new
+    exception <- cIntToEnum <$> with2 vec sym (\v s -> vecbasic_get_ffi v i s)
     case exception of
-      NoException -> return (Right basicsym)
+      NoException -> return (Right sym)
       _ -> return (Left exception)
   else
     Left RuntimeError
@@ -361,7 +361,7 @@ list_to_vecbasic syms = do
 
 vecbasic_size :: VecBasic -> Int
 vecbasic_size vec = unsafePerformIO $ 
-  fromIntegral <$> withVecBasic vec vecbasic_size_ffi
+  fromIntegral <$> with vec vecbasic_size_ffi
 
 foreign import ccall "symengine/cwrapper.h vecbasic_new" vecbasic_new_ffi :: IO (Ptr CVecBasic)
 foreign import ccall "symengine/cwrapper.h vecbasic_push_back" vecbasic_push_back_ffi :: Ptr CVecBasic -> Ptr CBasicSym -> IO ()
@@ -383,6 +383,9 @@ mkForeignPtr cons des = do
 data CDenseMatrix = CDenseMatrix
 newtype  DenseMatrix = DenseMatrix (ForeignPtr CDenseMatrix)
 
+instance Wrapped DenseMatrix CDenseMatrix where
+    with (DenseMatrix p) f = withForeignPtr p f
+
 instance Show (DenseMatrix) where
   show :: DenseMatrix -> String
   show (DenseMatrix mat) =
@@ -402,7 +405,7 @@ densematrix_new_rows_cols r c =  DenseMatrix <$>
 densematrix_new_vec :: NRows -> NCols -> [BasicSym] -> IO DenseMatrix
 densematrix_new_vec r c syms = do
   vec <- list_to_vecbasic syms
-  let cdensemat =  withVecBasic vec (\v ->  cdensematrix_new_vec_ffi (fromIntegral r) (fromIntegral c) v)
+  let cdensemat =  with vec (\v ->  cdensematrix_new_vec_ffi (fromIntegral r) (fromIntegral c) v)
   DenseMatrix <$>  mkForeignPtr cdensemat cdensematrix_free_ffi
 
 
