@@ -30,6 +30,7 @@ module Symengine
      densematrix_new_vec,
      densematrix_get,
      densematrix_set,
+     densematrix_size,
      SymengineException(NoException, RuntimeError, DivByZero, NotImplemented, DomainError, ParseError)
     ) where
 
@@ -426,8 +427,10 @@ densematrix_set :: DenseMatrix -> Row -> Col -> BasicSym -> IO ()
 densematrix_set mat r c sym =
     with2 mat sym (\m s -> cdensematrix_set_basic_ffi m (fromIntegral r) (fromIntegral c) s)
 
-densematrix_get_size :: DenseMatrix -> (NRows, NCols)
-densematrix_get_size mat = unsafePerformIO $  do
+-- | provides dimenions of matrix. combination of the FFI calls
+-- `dense_matrix_rows` and `dense_matrix_cols`
+densematrix_size :: DenseMatrix -> (NRows, NCols)
+densematrix_size mat = unsafePerformIO $  do
    rs <- with mat cdensematrix_rows_ffi
    cs <- with mat cdensematrix_cols_ffi
    return (fromIntegral rs, fromIntegral cs)

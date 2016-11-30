@@ -86,7 +86,7 @@ denseMatrixTests = testGroup "Dense Matrix"
           densematrix_get mat 0 1 @?= 11
    , HU.testCase "test get_size for matrix" $
      do
-       let syms <- [1, 2, 3, 4, 5, 6]
+       let syms = [1, 2, 3, 4, 5, 6]
        mat <- densematrix_new_vec 2 3 syms
        densematrix_size mat @?= (2, 3)
    ]
