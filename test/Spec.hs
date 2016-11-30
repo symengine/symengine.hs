@@ -65,17 +65,23 @@ vectorTests = testGroup "Vector"
 
 -- tests for dense matrices
 denseMatrixTests = testGroup "Dense Matrix"
-  [ HU.testCase "Create matrix and display" $
+  [ HU.testCase "Create matrix, test string representation, values" $
     do
-      let syms = [one, one, one, zero]
+      let syms = [1, 2, 3, 4]
       mat <- densematrix_new_vec 2 2 syms
-      show mat @?= "[1, 1]\n[1, 0]\n"
-    , HU.testCase "test get for matrix" $
+      show mat @?= "[1, 2]\n[3, 4]\n"
+
+      densematrix_get mat 0 0  @?= 1
+      densematrix_get mat 0 1  @?= 2
+      densematrix_get mat 1 0  @?= 3
+      densematrix_get mat 1 1  @?= 4
+    , HU.testCase "test set for matrix" $
         do
           let syms = [1, 2, 3, 4]
           mat <- densematrix_new_vec 2 2 syms
-          densematrix_get mat 0 0  @?= 1
-          densematrix_get mat 0 1  @?= 2
-          densematrix_get mat 1 0  @?= 3
-          densematrix_get mat 1 1  @?= 4
+          densematrix_set mat 0 0 10
+          densematrix_get mat 0 0 @?= 10
+
+          densematrix_set mat 0 1 11
+          densematrix_get mat 0 1 @?= 11
   ]
