@@ -28,6 +28,7 @@ module Symengine
      DenseMatrix,
      densematrix_new,
      densematrix_new_vec,
+     densematrix_get,
      SymengineException(NoException, RuntimeError, DivByZero, NotImplemented, DomainError, ParseError)
     ) where
 
@@ -58,6 +59,13 @@ cIntToEnum = toEnum . fromIntegral
 cIntFromEnum :: Enum a => a -> CInt
 cIntFromEnum = fromIntegral . fromEnum
 
+-- |given a raw pointer IO (Ptr a) and a destructor function pointer, make a
+-- foreign pointer
+mkForeignPtr :: (IO (Ptr a)) -> FunPtr (Ptr a -> IO ()) -> IO (ForeignPtr a)
+mkForeignPtr cons des = do
+  rawptr <- cons
+  finalized <- newForeignPtr des rawptr
+  return  finalized
 
 class Wrapped o i | o -> i where
   with :: o -> (Ptr i -> IO a) -> IO a
@@ -355,12 +363,12 @@ vecbasic_new = do
 
 list_to_vecbasic :: [BasicSym] -> IO VecBasic
 list_to_vecbasic syms = do
-  vec <- vecbasic_new 
+  vec <- vecbasic_new
   forM_ syms (\s -> vecbasic_push_back vec s)
   return vec
 
 vecbasic_size :: VecBasic -> Int
-vecbasic_size vec = unsafePerformIO $ 
+vecbasic_size vec = unsafePerformIO $
   fromIntegral <$> with vec vecbasic_size_ffi
 
 foreign import ccall "symengine/cwrapper.h vecbasic_new" vecbasic_new_ffi :: IO (Ptr CVecBasic)
@@ -373,11 +381,6 @@ foreign import ccall "symengine/cwrapper.h &vecbasic_free" vecbasic_free_ffi :: 
 
 -- Dense Matrices
 
-mkForeignPtr :: (IO (Ptr a)) -> FunPtr (Ptr a -> IO ()) -> IO (ForeignPtr a)
-mkForeignPtr cons des = do
-  rawptr <- cons
-  finalized <- newForeignPtr des rawptr
-  return  finalized
 
 
 data CDenseMatrix = CDenseMatrix
@@ -388,8 +391,8 @@ instance Wrapped DenseMatrix CDenseMatrix where
 
 instance Show (DenseMatrix) where
   show :: DenseMatrix -> String
-  show (DenseMatrix mat) =
-    unsafePerformIO $ withForeignPtr mat  (cdensematrix_str_ffi >=> peekCString)
+  show mat =
+    unsafePerformIO $ with mat  (cdensematrix_str_ffi >=> peekCString)
 
 
 densematrix_new :: IO DenseMatrix
@@ -411,12 +414,13 @@ densematrix_new_vec r c syms = do
 
 type Row = Int
 type Col = Int
-{-
-densematrix_get_basic :: DenseMatrix -> Row -> Col -> BasicSym
-densematrix_get_basic mat r c = unsafePerformIO $
-    do
-        withForeignPtr mat (\m -> cdensematrix_get_basic_ffi m r c)
--}
+
+densematrix_get :: DenseMatrix -> Row -> Col -> BasicSym
+densematrix_get mat r c = unsafePerformIO $ do
+      sym <- basicsym_new
+      with2 mat sym (\m s -> cdensematrix_get_basic_ffi s m (fromIntegral r) (fromIntegral c))
+      return sym
+
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_new" cdensematrix_new_ffi :: IO (Ptr CDenseMatrix)
 foreign import ccall "symengine/cwrapper.h &dense_matrix_free" cdensematrix_free_ffi :: FunPtr ((Ptr CDenseMatrix) -> IO ())

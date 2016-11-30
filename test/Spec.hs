@@ -22,16 +22,14 @@ tests = testGroup "Tests" [unitTests, vectorTests, denseMatrixTests]
 -- properties = testGroup "Properties" [qcProps]
 
 unitTests = testGroup "Unit tests"
-  [ HU.testCase "FFI Sanity Check - ASCII Art should be non-empty" $ 
+  [ HU.testCase "FFI Sanity Check - ASCII Art should be non-empty" $
     do
       ascii_art <- Sym.ascii_art_str
       HU.assertBool "ASCII art from ascii_art_str is empty" (not . null $ ascii_art)
-
-
     , HU.testCase "Basic Constructors" $
     do
-      "0" @?= (show zero)     
-      "1" @?= (show one)     
+      "0" @?= (show zero)
+      "1" @?= (show one)
       "-1" @?= (show minus_one)
     , HU.testCase "Basic Trignometric Functions" $
     do
@@ -40,12 +38,12 @@ unitTests = testGroup "Unit tests"
 
       sin zero @?= zero
       cos zero @?= one
-      
+
       sin (pi / 6) @?= 1 / 2
       sin (pi / 3) @?= (3 ** (1/2)) / 2
 
       cos (pi / 6) @?= (3 ** (1/2)) / 2
-      cos (pi / 3) @?= 1 / 2 
+      cos (pi / 3) @?= 1 / 2
 
       sin pi_over_2 @?= one
       cos pi_over_2 @?= zero
@@ -53,12 +51,12 @@ unitTests = testGroup "Unit tests"
   ]
 -- tests for vectors
 vectorTests = testGroup "Vector"
-    [ HU.testCase "Vector - create, push_back, get out value" $ 
+    [ HU.testCase "Vector - create, push_back, get out value" $
       do
         v <- vecbasic_new
         vecbasic_push_back v (11 :: BasicSym)
         vecbasic_push_back v (12 :: BasicSym)
-      
+
         vecbasic_get v 0 @?= Right (11 :: BasicSym)
         vecbasic_get v 1 @?= Right (12 :: BasicSym)
         vecbasic_get v 101 @?= Left RuntimeError
@@ -66,10 +64,18 @@ vectorTests = testGroup "Vector"
 
 
 -- tests for dense matrices
-denseMatrixTests = testGroup "Dense Matrix" 
-  [ HU.testCase "Create matrix and display" $ 
+denseMatrixTests = testGroup "Dense Matrix"
+  [ HU.testCase "Create matrix and display" $
     do
       let syms = [one, one, one, zero]
       mat <- densematrix_new_vec 2 2 syms
       show mat @?= "[1, 1]\n[1, 0]\n"
+    , HU.testCase "test get for matrix" $
+        do
+          let syms = [1, 2, 3, 4]
+          mat <- densematrix_new_vec 2 2 syms
+          densematrix_get mat 0 0  @?= 1
+          densematrix_get mat 0 1  @?= 2
+          densematrix_get mat 1 0  @?= 3
+          densematrix_get mat 1 1  @?= 4
   ]
