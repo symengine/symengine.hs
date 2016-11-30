@@ -57,16 +57,21 @@ cIntToEnum = toEnum . fromIntegral
 cIntFromEnum :: Enum a => a -> CInt
 cIntFromEnum = fromIntegral . fromEnum
 
-data BasicStruct = BasicStruct {
+{-
+data CBasicSym = CBasicSym {
     data_ptr :: Ptr ()
 }
+-}
 
-instance Storable BasicStruct where
+data CBasicSym = CBasicSym
+
+{-
+instance Storable CBasicSym where
     alignment _ = 8
     sizeOf _ = sizeOf nullPtr
-    peek basic_ptr = BasicStruct <$> peekByteOff basic_ptr 0
-    poke basic_ptr BasicStruct{..} = pokeByteOff basic_ptr 0 data_ptr
-
+    peek basic_ptr = CBasicSym <$> peekByteOff basic_ptr 0
+    poke basic_ptr CBasicSym{..} = pokeByteOff basic_ptr 0 data_ptr
+-}
 
 
 -- |represents a symbol exported by SymEngine. create this using the functions
@@ -81,17 +86,16 @@ instance Storable BasicStruct where
 --
 -- >>> complex 1 2
 -- 1 + 2*I
-data BasicSym = BasicSym { fptr :: ForeignPtr BasicStruct }
+newtype BasicSym = BasicSym (ForeignPtr CBasicSym)
 
-withBasicSym :: BasicSym -> (Ptr BasicStruct -> IO a) -> IO a
-withBasicSym p f = withForeignPtr (fptr p ) f
+withBasicSym :: BasicSym -> (Ptr CBasicSym -> IO a) -> IO a
+withBasicSym (BasicSym ptr) = withForeignPtr ptr
 
-withBasicSym2 :: BasicSym -> BasicSym -> (Ptr BasicStruct -> Ptr BasicStruct -> IO a) -> IO a
+withBasicSym2 :: BasicSym -> BasicSym -> (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> IO a
 withBasicSym2 p1 p2 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> f p1 p2))
 
-withBasicSym3 :: BasicSym -> BasicSym -> BasicSym -> (Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO a) -> IO a
+withBasicSym3 :: BasicSym -> BasicSym -> BasicSym -> (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> IO a
 withBasicSym3 p1 p2 p3 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> withBasicSym p3 (\p3 -> f p1 p2 p3)))
-
 
 -- | constructor for 0
 zero :: BasicSym
@@ -124,9 +128,9 @@ expand = basic_unaryop basic_expand_ffi
 eulerGamma :: BasicSym
 eulerGamma = basic_obj_constructor basic_const_EulerGamma_ffi
 
-basic_obj_constructor :: (Ptr BasicStruct -> IO ()) -> BasicSym
+basic_obj_constructor :: (Ptr CBasicSym -> IO ()) -> BasicSym
 basic_obj_constructor init_fn = unsafePerformIO $ do
-    basic_ptr <- create_basicsym
+    basic_ptr <- basicsym_new
     withBasicSym basic_ptr init_fn
     return basic_ptr
 
@@ -146,14 +150,14 @@ intToCInt i = toEnum i
 
 basic_int_signed :: Int -> BasicSym
 basic_int_signed i = unsafePerformIO $ do
-    iptr <- create_basicsym
+    iptr <- basicsym_new
     withBasicSym iptr (\iptr -> integer_set_si_ffi iptr (intToCLong i) )
     return iptr
 
 
 basic_from_integer :: Integer -> BasicSym
 basic_from_integer i = unsafePerformIO $ do
-    iptr <- create_basicsym
+    iptr <- basicsym_new
     withBasicSym iptr (\iptr -> integer_set_si_ffi iptr (fromInteger i))
     return iptr
 
@@ -166,24 +170,23 @@ ascii_art_str = ascii_art_str_ffi >>= peekCString
 
 -- |Create a basic object that represents all other objects through
 -- the FFI
-create_basicsym :: IO BasicSym
-create_basicsym = do
-    basic_ptr <- newArray [BasicStruct { data_ptr = nullPtr }]
-    basic_new_heap_ffi basic_ptr
+basicsym_new :: IO BasicSym
+basicsym_new = do
+    basic_ptr <- basic_new_heap_ffi
     finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi basic_ptr
-    return $ BasicSym { fptr = finalized_ptr }
+    return $ BasicSym finalized_ptr
 
-basic_binaryop :: (Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO a) -> BasicSym -> BasicSym -> BasicSym
+basic_binaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym -> BasicSym
 basic_binaryop f a b = unsafePerformIO $ do
-    s <- create_basicsym
+    s <- basicsym_new
     withBasicSym3 s a b f
-    return s 
+    return s
 
-basic_unaryop :: (Ptr BasicStruct -> Ptr BasicStruct -> IO a) -> BasicSym -> BasicSym
+basic_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym
 basic_unaryop f a = unsafePerformIO $ do
-    s <- create_basicsym
+    s <- basicsym_new
     withBasicSym2 s a f
-    return s 
+    return s
 
 
 basic_pow :: BasicSym -> BasicSym -> BasicSym
@@ -199,14 +202,14 @@ complex a b = (basic_binaryop complex_set_ffi) a b
 
 basic_rational_from_integer :: Integer -> Integer -> BasicSym
 basic_rational_from_integer i j = unsafePerformIO $ do
-    s <- create_basicsym
+    s <- basicsym_new
     withBasicSym s (\s -> rational_set_si_ffi s (integerToCLong i) (integerToCLong j))
     return s 
 
 -- |Create a symbol with the given name
 symbol :: String -> BasicSym
 symbol name = unsafePerformIO $ do
-    s <- create_basicsym
+    s <- basicsym_new
     cname <- newCString name
     withBasicSym s (\s -> symbol_set_ffi s cname)
     free cname
@@ -259,56 +262,56 @@ instance Floating BasicSym where
     atanh = basic_unaryop basic_atanh_ffi
 
 foreign import ccall "symengine/cwrapper.h ascii_art_str" ascii_art_str_ffi :: IO CString
-foreign import ccall "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: Ptr BasicStruct -> IO ()
-foreign import ccall "symengine/cwrapper.h &basic_free_heap" ptr_basic_free_heap_ffi :: FunPtr(Ptr BasicStruct -> IO ())
+foreign import ccall "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: IO (Ptr CBasicSym)
+foreign import ccall "symengine/cwrapper.h &basic_free_heap" ptr_basic_free_heap_ffi :: FunPtr(Ptr CBasicSym -> IO ())
 
 -- constants
-foreign import ccall "symengine/cwrapper.h basic_const_zero" basic_const_zero_ffi :: Ptr BasicStruct -> IO ()
-foreign import ccall "symengine/cwrapper.h basic_const_one" basic_const_one_ffi :: Ptr BasicStruct -> IO ()
-foreign import ccall "symengine/cwrapper.h basic_const_minus_one" basic_const_minus_one_ffi :: Ptr BasicStruct -> IO ()
-foreign import ccall "symengine/cwrapper.h basic_const_I" basic_const_I_ffi :: Ptr BasicStruct -> IO ()
-foreign import ccall "symengine/cwrapper.h basic_const_pi" basic_const_pi_ffi :: Ptr BasicStruct -> IO ()
-foreign import ccall "symengine/cwrapper.h basic_const_E" basic_const_E_ffi :: Ptr BasicStruct -> IO ()
-foreign import ccall "symengine/cwrapper.h basic_const_EulerGamma" basic_const_EulerGamma_ffi :: Ptr BasicStruct -> IO ()
-foreign import ccall "symengine/cwrapper.h basic_str" basic_str_ffi :: Ptr BasicStruct -> IO CString
-foreign import ccall "symengine/cwrapper.h basic_eq" basic_eq_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO Int
+foreign import ccall "symengine/cwrapper.h basic_const_zero" basic_const_zero_ffi :: Ptr CBasicSym -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_const_one" basic_const_one_ffi :: Ptr CBasicSym -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_const_minus_one" basic_const_minus_one_ffi :: Ptr CBasicSym -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_const_I" basic_const_I_ffi :: Ptr CBasicSym -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_const_pi" basic_const_pi_ffi :: Ptr CBasicSym -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_const_E" basic_const_E_ffi :: Ptr CBasicSym -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_const_EulerGamma" basic_const_EulerGamma_ffi :: Ptr CBasicSym -> IO ()
+foreign import ccall "symengine/cwrapper.h basic_str" basic_str_ffi :: Ptr CBasicSym -> IO CString
+foreign import ccall "symengine/cwrapper.h basic_eq" basic_eq_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO Int
 
-foreign import ccall "symengine/cwrapper.h symbol_set" symbol_set_ffi :: Ptr BasicStruct -> CString -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_diff" basic_diff_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h symbol_set" symbol_set_ffi :: Ptr CBasicSym -> CString -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_diff" basic_diff_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 
-foreign import ccall "symengine/cwrapper.h integer_set_si" integer_set_si_ffi :: Ptr BasicStruct -> CLong -> IO CInt
+foreign import ccall "symengine/cwrapper.h integer_set_si" integer_set_si_ffi :: Ptr CBasicSym -> CLong -> IO CInt
 
-foreign import ccall "symengine/cwrapper.h rational_set" rational_set_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h rational_set_si" rational_set_si_ffi :: Ptr BasicStruct -> CLong -> CLong -> IO ()
+foreign import ccall "symengine/cwrapper.h rational_set" rational_set_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h rational_set_si" rational_set_si_ffi :: Ptr CBasicSym -> CLong -> CLong -> IO ()
 
-foreign import ccall "symengine/cwrapper.h complex_set" complex_set_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h complex_set" complex_set_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 
-foreign import ccall "symengine/cwrapper.h basic_expand" basic_expand_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_expand" basic_expand_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 
 
-foreign import ccall "symengine/cwrapper.h basic_add" basic_add_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_sub" basic_sub_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_mul" basic_mul_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_div" basic_div_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_pow" basic_pow_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_neg" basic_neg_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_abs" basic_abs_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_add" basic_add_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_sub" basic_sub_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_mul" basic_mul_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_div" basic_div_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_pow" basic_pow_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_neg" basic_neg_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_abs" basic_abs_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 
-foreign import ccall "symengine/cwrapper.h basic_sin" basic_sin_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_cos" basic_cos_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_tan" basic_tan_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_sin" basic_sin_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_cos" basic_cos_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_tan" basic_tan_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 
-foreign import ccall "symengine/cwrapper.h basic_asin" basic_asin_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_acos" basic_acos_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_atan" basic_atan_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_asin" basic_asin_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_acos" basic_acos_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_atan" basic_atan_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 
-foreign import ccall "symengine/cwrapper.h basic_sinh" basic_sinh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_cosh" basic_cosh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_tanh" basic_tanh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_sinh" basic_sinh_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_cosh" basic_cosh_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_tanh" basic_tanh_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 
-foreign import ccall "symengine/cwrapper.h basic_asinh" basic_asinh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_acosh" basic_acosh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
-foreign import ccall "symengine/cwrapper.h basic_atanh" basic_atanh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_asinh" basic_asinh_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_acosh" basic_acosh_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
+foreign import ccall "symengine/cwrapper.h basic_atanh" basic_atanh_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 
 -- vectors binding
 data CVecBasic = CVecBasic
@@ -332,7 +335,7 @@ vecbasic_get vec i =
   if i >= 0 && i < vecbasic_size vec
   then 
     unsafePerformIO $ do
-    basicsym <- create_basicsym
+    basicsym <- basicsym_new
     exception <- cIntToEnum <$> withVecBasic vec (\v -> withBasicSym basicsym (\bs -> vecbasic_get_ffi v i bs))
     --exception <- toEnum <$> withBasicSym basicsym (\bs -> vecbasic_get_ffi vec i bs)
     case exception of
@@ -361,57 +364,60 @@ vecbasic_size vec = unsafePerformIO $
   fromIntegral <$> withVecBasic vec vecbasic_size_ffi
 
 foreign import ccall "symengine/cwrapper.h vecbasic_new" vecbasic_new_ffi :: IO (Ptr CVecBasic)
-foreign import ccall "symengine/cwrapper.h vecbasic_push_back" vecbasic_push_back_ffi :: Ptr CVecBasic -> Ptr BasicStruct -> IO ()
-foreign import ccall "symengine/cwrapper.h vecbasic_get" vecbasic_get_ffi :: Ptr CVecBasic -> Int -> Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h vecbasic_push_back" vecbasic_push_back_ffi :: Ptr CVecBasic -> Ptr CBasicSym -> IO ()
+foreign import ccall "symengine/cwrapper.h vecbasic_get" vecbasic_get_ffi :: Ptr CVecBasic -> Int -> Ptr CBasicSym -> IO CInt
 foreign import ccall "symengine/cwrapper.h vecbasic_size" vecbasic_size_ffi :: Ptr CVecBasic -> IO CSize
 foreign import ccall "symengine/cwrapper.h &vecbasic_free" vecbasic_free_ffi :: FunPtr (Ptr CVecBasic -> IO ())
 
 
 
 -- Dense Matrices
-data Wrapped a = Wrapped {
-  ptr :: ForeignPtr a
-}
 
-mkWrapped :: (IO (Ptr a)) -> FunPtr (Ptr a -> IO ()) -> IO (Wrapped a)
-mkWrapped cons des = do
+mkForeignPtr :: (IO (Ptr a)) -> FunPtr (Ptr a -> IO ()) -> IO (ForeignPtr a)
+mkForeignPtr cons des = do
   rawptr <- cons
   finalized <- newForeignPtr des rawptr
-  return $ Wrapped finalized
+  return  finalized
 
-withWrapped :: Wrapped a -> (Ptr a -> IO b) -> IO b
-withWrapped w f = withForeignPtr (ptr w) f
 
 data CDenseMatrix = CDenseMatrix
-newtype  DenseMatrix = DenseMatrix (Wrapped CDenseMatrix)
+newtype  DenseMatrix = DenseMatrix (ForeignPtr CDenseMatrix)
 
 instance Show (DenseMatrix) where
   show :: DenseMatrix -> String
-  show (DenseMatrix mat) = 
-    unsafePerformIO $ withWrapped mat  (cdensematrix_str_ffi >=> peekCString)
+  show (DenseMatrix mat) =
+    unsafePerformIO $ withForeignPtr mat  (cdensematrix_str_ffi >=> peekCString)
 
 
 densematrix_new :: IO DenseMatrix
-densematrix_new = DenseMatrix <$> (mkWrapped cdensematrix_new_ffi cdensematrix_free_ffi)
+densematrix_new = DenseMatrix <$> (mkForeignPtr cdensematrix_new_ffi cdensematrix_free_ffi)
 
 type NRows = Int
 type NCols = Int
 
-
 densematrix_new_rows_cols :: NRows -> NCols -> IO DenseMatrix
-densematrix_new_rows_cols r c =  DenseMatrix <$> 
-  mkWrapped (cdensematrix_new_rows_cols_ffi (fromIntegral r) (fromIntegral c)) cdensematrix_free_ffi
-  
+densematrix_new_rows_cols r c =  DenseMatrix <$>
+  mkForeignPtr (cdensematrix_new_rows_cols_ffi (fromIntegral r) (fromIntegral c)) cdensematrix_free_ffi
 
 densematrix_new_vec :: NRows -> NCols -> [BasicSym] -> IO DenseMatrix
 densematrix_new_vec r c syms = do
   vec <- list_to_vecbasic syms
   let cdensemat =  withVecBasic vec (\v ->  cdensematrix_new_vec_ffi (fromIntegral r) (fromIntegral c) v)
-  DenseMatrix <$>  mkWrapped cdensemat cdensematrix_free_ffi
+  DenseMatrix <$>  mkForeignPtr cdensemat cdensematrix_free_ffi
+
+
+type Row = Int
+type Col = Int
+{-
+densematrix_get_basic :: DenseMatrix -> Row -> Col -> BasicSym
+densematrix_get_basic mat r c = unsafePerformIO $
+    do
+        withForeignPtr mat (\m -> cdensematrix_get_basic_ffi m r c)
+-}
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_new" cdensematrix_new_ffi :: IO (Ptr CDenseMatrix)
 foreign import ccall "symengine/cwrapper.h &dense_matrix_free" cdensematrix_free_ffi :: FunPtr ((Ptr CDenseMatrix) -> IO ())
 foreign import ccall "symengine/cwrapper.h dense_matrix_str" cdensematrix_str_ffi :: Ptr CDenseMatrix -> IO CString
 foreign import ccall "symengine/cwrapper.h dense_matrix_new_rows_cols" cdensematrix_new_rows_cols_ffi :: CUInt -> CUInt -> IO (Ptr CDenseMatrix)
 foreign import ccall "symengine/cwrapper.h dense_matrix_new_vec" cdensematrix_new_vec_ffi :: CUInt -> CUInt -> Ptr CVecBasic -> IO (Ptr CDenseMatrix)
-
+foreign import ccall "symengine/cwrapper.h dense_matrix_get_basic" cdensematrix_get_basic_ffi :: Ptr (CBasicSym)  -> Ptr CDenseMatrix -> CUInt -> CUInt -> IO (Ptr CDenseMatrix)
