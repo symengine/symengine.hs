@@ -108,4 +108,42 @@ denseMatrixTests = testGroup "Dense Matrix"
       eye <- densematrix_new_eye 2 2 0
       correct <- densematrix_new_vec 2 2 [1, 0, 0, 1]
       eye @?= correct
+  , HU.testCase "diagonal matrix" $
+    do
+     diag <- densematrix_new_diag [1, 2, 3] 1
+     correct <- densematrix_new_vec 4 4 [0, 1, 0, 0,
+                                         0, 0, 2, 0,
+                                         0, 0, 0, 3,
+                                         0, 0, 0, 0]
+     diag @=? correct
+  , HU.testCase "Dense Matrix + Dense Matrix" $ do
+      eye <- densematrix_new_eye 2 2 0
+      ans <- densematrix_new_vec 2 2 [2, 0,
+                                      0, 2]
+      densematrix_add eye eye @=? ans
+      -- figure out how to use QuickCheck for this
+  , HU.testCase "Dense Matrix * scalar" $ do
+      eye <- densematrix_new_eye 2 2 0
+      False @=? True
+
+  , HU.testCase "Dense Matrix * Matrix" $ do
+      eye <- densematrix_new_eye 2 2 0
+      False @=? True
+
+  , HU.testCase "Dense Matrix LU" $ do
+      eye <- densematrix_new_eye 2 2 0
+      False @=? True 
+  , HU.testCase "Dense Matrix LDL" $ do
+      eye <- densematrix_new_eye 2 2 0
+      False @=? True
+  , HU.testCase "Dense Matrix FFLU" $ do
+      eye <- densematrix_new_eye 2 2 0
+      False @=? True
+  , HU.testCase "Dense Matrix FFLDU" $ do
+      eye <- densematrix_new_eye 2 2 0
+      False @=? True
+  , HU.testCase "Dense Matrix LU Solve" $ do
+      a <- densematrix_new_eye 2 2 0
+      b <- densematrix_new_eye 2 2 0
+      False @=? True
    ]

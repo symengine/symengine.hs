@@ -103,5 +103,8 @@ of C types
 
 # Bugs
 
-if I create a lazy list of BasicSym, then what happens? it gets forced to evaluate
+* if I create a lazy list of BasicSym, then what happens? it gets forced to evaluate
 when I pass it through something like `densematrix_diag`
+
+
+* `densematrix_new_vec  2 3 []` crashes. We need to check for this in our code

@@ -34,6 +34,18 @@ module Symengine
      densematrix_get,
      densematrix_set,
      densematrix_size,
+     -- arithmetic
+     densematrix_add,
+     densematrix_mul_matrix,
+     densematrix_mul_scalar,
+     --decomposition
+     L(L), D(D), U(U),
+     densematrix_lu,
+     densematrix_ldl,
+     densematrix_fflu,
+     densematrix_ffldu,
+     densematrix_lu_solve,
+     --exception
      SymengineException(NoException, RuntimeError, DivByZero, NotImplemented, DomainError, ParseError)
     ) where
 
@@ -80,6 +92,10 @@ with2 o1 o2 f = with o1 (\p1 -> with o2 (\p2 -> f p1 p2))
 
 with3 :: Wrapped o1 i1 => Wrapped o2 i2 => Wrapped o3 i3 => o1 -> o2 -> o3 -> (Ptr i1 -> Ptr i2 -> Ptr i3 -> IO a) -> IO a
 with3 o1 o2 o3 f = with2 o1 o2 (\p1 p2 -> with o3 (\p3 -> f p1 p2 p3))
+
+
+with4:: Wrapped o1 i1 => Wrapped o2 i2 => Wrapped o3 i3 => Wrapped o4 i4 => o1 -> o2 -> o3 -> o4 -> (Ptr i1 -> Ptr i2 -> Ptr i3 -> Ptr i4 -> IO a) -> IO a
+with4 o1 o2 o3 o4 f = with o1 (\p1 -> with3 o2 o3 o4 (\p2 p3 p4 -> f p1 p2 p3 p4))
 
 data CBasicSym = CBasicSym
 
@@ -465,6 +481,72 @@ densematrix_size mat = unsafePerformIO $  do
    cs <- with mat cdensematrix_cols_ffi
    return (fromIntegral rs, fromIntegral cs)
 
+densematrix_add :: DenseMatrix -> DenseMatrix -> DenseMatrix
+densematrix_add mata matb = unsafePerformIO $ do
+   res <- densematrix_new
+   with3 res mata matb cdensematrix_add_matrix
+   return res
+
+
+densematrix_mul_matrix :: DenseMatrix -> DenseMatrix -> DenseMatrix
+densematrix_mul_matrix mata matb = unsafePerformIO $ do
+   res <- densematrix_new
+   with3 res mata matb cdensematrix_mul_matrix
+   return res
+
+
+densematrix_mul_scalar :: DenseMatrix -> BasicSym -> DenseMatrix
+densematrix_mul_scalar mata sym = unsafePerformIO $ do
+   res <- densematrix_new
+   with3 res mata sym cdensematrix_mul_scalar
+   return res
+
+
+newtype L = L DenseMatrix
+newtype U = U DenseMatrix
+
+densematrix_lu :: DenseMatrix -> (L, U)
+densematrix_lu mat = unsafePerformIO $ do
+   l <- densematrix_new
+   u <- densematrix_new
+   with3 l u mat cdensematrix_lu
+   return (L l, U u)
+
+newtype D = D DenseMatrix
+densematrix_ldl :: DenseMatrix -> (L, D)
+densematrix_ldl mat = unsafePerformIO $ do
+  l <- densematrix_new
+  d <- densematrix_new
+  with3 l d mat cdensematrix_ldl
+
+  return (L l, D d)
+
+
+newtype FFLU = FFLU DenseMatrix
+densematrix_fflu :: DenseMatrix -> FFLU
+densematrix_fflu mat = unsafePerformIO $ do
+  fflu <- densematrix_new
+  with2 fflu mat cdensematrix_fflu
+  return (FFLU fflu)
+
+
+densematrix_ffldu :: DenseMatrix -> (L, D, U)
+densematrix_ffldu mat = unsafePerformIO $ do
+  l <- densematrix_new
+  d <- densematrix_new
+  u <- densematrix_new
+
+  with4 l d u mat cdensematrix_ffldu
+  return (L l, D d, U u)
+
+-- solve A x = B
+-- A is first param, B is second larameter
+densematrix_lu_solve :: DenseMatrix -> DenseMatrix -> DenseMatrix
+densematrix_lu_solve a b = unsafePerformIO $ do
+  x <- densematrix_new
+  with3 x a b cdensematrix_lu_solve
+  return x
+
 foreign import ccall "symengine/cwrapper.h dense_matrix_new" cdensematrix_new_ffi :: IO (Ptr CDenseMatrix)
 foreign import ccall "symengine/cwrapper.h &dense_matrix_free" cdensematrix_free_ffi :: FunPtr ((Ptr CDenseMatrix) -> IO ())
 foreign import ccall "symengine/cwrapper.h dense_matrix_new_rows_cols" cdensematrix_new_rows_cols_ffi :: CUInt -> CUInt -> IO (Ptr CDenseMatrix)
@@ -482,3 +564,12 @@ foreign import ccall "symengine/cwrapper.h dense_matrix_set_basic" cdensematrix_
 foreign import ccall "symengine/cwrapper.h dense_matrix_rows" cdensematrix_rows_ffi :: Ptr CDenseMatrix -> IO CULong
 foreign import ccall "symengine/cwrapper.h dense_matrix_cols" cdensematrix_cols_ffi :: Ptr CDenseMatrix -> IO CULong
 
+foreign import ccall "symengine/cwrapper.h dense_matrix_add_matrix" cdensematrix_add_matrix :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_mul_matrix" cdensematrix_mul_matrix :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_mul_scalar" cdensematrix_mul_scalar :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CBasicSym -> IO ()
+
+foreign import ccall "symengine/cwrapper.h dense_matrix_LU" cdensematrix_lu :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_LDL" cdensematrix_ldl :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_FFLU" cdensematrix_fflu :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_FFLDU" cdensematrix_ffldu :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_LU_solve" cdensematrix_lu_solve:: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
