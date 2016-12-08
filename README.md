@@ -100,3 +100,8 @@ All code is released under the [MIT License](https://github.com/symengine/symeng
 of C types
 
 * API design - how to best handle exceptions?
+
+# Bugs
+
+if I create a lazy list of BasicSym, then what happens? it gets forced to evaluate
+when I pass it through something like `densematrix_diag`

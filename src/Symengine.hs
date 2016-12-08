@@ -17,7 +17,8 @@ module Symengine
      minus_one,
      rational,
      complex,
-     symbol,
+     symbol_new,
+     diff,
      BasicSym,
      VecBasic,
      vecbasic_new,
@@ -28,6 +29,8 @@ module Symengine
      DenseMatrix,
      densematrix_new,
      densematrix_new_vec,
+     densematrix_new_eye,
+     densematrix_new_diag,
      densematrix_get,
      densematrix_set,
      densematrix_size,
@@ -217,8 +220,8 @@ basic_rational_from_integer i j = unsafePerformIO $ do
     return s 
 
 -- |Create a symbol with the given name
-symbol :: String -> BasicSym
-symbol name = unsafePerformIO $ do
+symbol_new :: String -> IO BasicSym
+symbol_new name = do
     s <- basicsym_new
     cname <- newCString name
     with s (\s -> symbol_set_ffi s cname)
@@ -396,6 +399,11 @@ instance Show (DenseMatrix) where
   show mat =
     unsafePerformIO $ with mat  (cdensematrix_str_ffi >=> peekCString)
 
+instance Eq (DenseMatrix) where
+  (==) :: DenseMatrix -> DenseMatrix -> Bool
+  (==) mat1 mat2 = 
+    1 == fromIntegral (unsafePerformIO $
+                       with2 mat1 mat2 cdensematrix_eq_ffi)
 
 densematrix_new :: IO DenseMatrix
 densematrix_new = DenseMatrix <$> (mkForeignPtr cdensematrix_new_ffi cdensematrix_free_ffi)
@@ -414,6 +422,27 @@ densematrix_new_vec r c syms = do
   DenseMatrix <$>  mkForeignPtr cdensemat cdensematrix_free_ffi
 
 
+type Offset = Int
+-- create a matrix with 1's on the diagonal offset by offset
+densematrix_new_eye :: NRows -> NCols -> Offset -> IO DenseMatrix
+densematrix_new_eye r c offset = do
+  mat <- densematrix_new_rows_cols r c
+  with mat (\m -> cdensematrix_eye_ffi m
+                 (fromIntegral r)
+                 (fromIntegral c)
+                 (fromIntegral offset))
+  return mat
+
+-- create a matrix with diagonal elements at offest k
+densematrix_new_diag :: [BasicSym] -> Int -> IO DenseMatrix
+densematrix_new_diag syms offset = do
+  let dim = length syms
+  vecsyms <- list_to_vecbasic syms
+  mat <- densematrix_new_rows_cols dim dim
+  with2 mat vecsyms (\m vs -> cdensematrix_diag_ffi m vs (fromIntegral offset))
+
+  return mat
+
 type Row = Int
 type Col = Int
 
@@ -427,6 +456,7 @@ densematrix_set :: DenseMatrix -> Row -> Col -> BasicSym -> IO ()
 densematrix_set mat r c sym =
     with2 mat sym (\m s -> cdensematrix_set_basic_ffi m (fromIntegral r) (fromIntegral c) s)
 
+
 -- | provides dimenions of matrix. combination of the FFI calls
 -- `dense_matrix_rows` and `dense_matrix_cols`
 densematrix_size :: DenseMatrix -> (NRows, NCols)
@@ -439,6 +469,9 @@ foreign import ccall "symengine/cwrapper.h dense_matrix_new" cdensematrix_new_ff
 foreign import ccall "symengine/cwrapper.h &dense_matrix_free" cdensematrix_free_ffi :: FunPtr ((Ptr CDenseMatrix) -> IO ())
 foreign import ccall "symengine/cwrapper.h dense_matrix_new_rows_cols" cdensematrix_new_rows_cols_ffi :: CUInt -> CUInt -> IO (Ptr CDenseMatrix)
 foreign import ccall "symengine/cwrapper.h dense_matrix_new_vec" cdensematrix_new_vec_ffi :: CUInt -> CUInt -> Ptr CVecBasic -> IO (Ptr CDenseMatrix)
+foreign import ccall "symengine/cwrapper.h dense_matrix_eye" cdensematrix_eye_ffi :: Ptr CDenseMatrix -> CULong -> CULong  -> CULong -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_diag" cdensematrix_diag_ffi :: Ptr CDenseMatrix -> Ptr CVecBasic -> CULong  -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_eq" cdensematrix_eq_ffi :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO CInt
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_str" cdensematrix_str_ffi :: Ptr CDenseMatrix -> IO CString
 
@@ -448,3 +481,4 @@ foreign import ccall "symengine/cwrapper.h dense_matrix_set_basic" cdensematrix_
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_rows" cdensematrix_rows_ffi :: Ptr CDenseMatrix -> IO CULong
 foreign import ccall "symengine/cwrapper.h dense_matrix_cols" cdensematrix_cols_ffi :: Ptr CDenseMatrix -> IO CULong
+

@@ -12,7 +12,7 @@ import Prelude hiding (pi)
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [unitTests, vectorTests, denseMatrixTests]
+tests = testGroup "Tests" [basicTests, vectorTests, denseMatrixTests]
 
 
 -- These are used to check invariants that can be tested by creating
@@ -21,17 +21,19 @@ tests = testGroup "Tests" [unitTests, vectorTests, denseMatrixTests]
 -- properties :: TestTree
 -- properties = testGroup "Properties" [qcProps]
 
-unitTests = testGroup "Unit tests"
-  [ HU.testCase "FFI Sanity Check - ASCII Art should be non-empty" $
+basicTests = testGroup "Basic tests"
+  [ HU.testCase "ascii art" $ 
     do
       ascii_art <- Sym.ascii_art_str
       HU.assertBool "ASCII art from ascii_art_str is empty" (not . null $ ascii_art)
-    , HU.testCase "Basic Constructors" $
+    ,
+    HU.testCase "Basic Constructors" $
     do
       "0" @?= (show zero)
       "1" @?= (show one)
       "-1" @?= (show minus_one)
-    , HU.testCase "Basic Trignometric Functions" $
+    ,
+    HU.testCase "Basic Trignometric Functions" $
     do
       let pi_over_3 = pi / 3 :: BasicSym
       let pi_over_2 = pi / 2 :: BasicSym
@@ -47,6 +49,18 @@ unitTests = testGroup "Unit tests"
 
       sin pi_over_2 @?= one
       cos pi_over_2 @?= zero
+   ,
+   HU.testCase "New Symbols, differentiation" $ 
+   do
+      x <- symbol_new "x"
+      y <- symbol_new "y"
+
+      x - x @?= zero
+      x + y @?= y + x
+      diff (x ** 2 + y) x @?= 2 * x
+      diff (x * y) x @?= y
+      diff (sin x) x @?= cos x
+      diff (cos x) x @?= -(sin x)
 
   ]
 -- tests for vectors
@@ -89,4 +103,9 @@ denseMatrixTests = testGroup "Dense Matrix"
        let syms = [1, 2, 3, 4, 5, 6]
        mat <- densematrix_new_vec 2 3 syms
        densematrix_size mat @?= (2, 3)
+  , HU.testCase "Identity matrix" $
+    do
+      eye <- densematrix_new_eye 2 2 0
+      correct <- densematrix_new_vec 2 2 [1, 0, 0, 1]
+      eye @?= correct
    ]
