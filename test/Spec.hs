@@ -7,6 +7,9 @@ import Data.Ord
 import Data.Monoid
 
 import Symengine as Sym
+import Symengine.DenseMatrix
+import Symengine.VecBasic
+import Symengine.BasicSym
 import Prelude hiding (pi)
 
 main = defaultMain tests
@@ -24,7 +27,7 @@ tests = testGroup "Tests" [basicTests, vectorTests, denseMatrixTests]
 basicTests = testGroup "Basic tests"
   [ HU.testCase "ascii art" $ 
     do
-      ascii_art <- Sym.ascii_art_str
+      ascii_art <- ascii_art_str
       HU.assertBool "ASCII art from ascii_art_str is empty" (not . null $ ascii_art)
     ,
     HU.testCase "Basic Constructors" $
