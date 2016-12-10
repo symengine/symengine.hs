@@ -160,8 +160,8 @@ basic_rational_from_integer i j = unsafePerformIO $ do
     return s 
 
 -- |Create a symbol with the given name
-symbol_new :: String -> IO BasicSym
-symbol_new name = do
+symbol_new :: String -> BasicSym
+symbol_new name = unsafePerformIO $ do
     s <- basicsym_new
     cname <- newCString name
     with s (\s -> symbol_set_ffi s cname)

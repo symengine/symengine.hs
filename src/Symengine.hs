@@ -8,8 +8,6 @@ Description : Symengine bindings to Haskell
 -}
 module Symengine
   (module Symengine.Internal
-     -- Dense matrices
-     --exception
     ) where
 
 import Foreign.C.Types
@@ -26,10 +24,3 @@ import Control.Monad
 import GHC.Real
 
 import Symengine.Internal
-
-
--- import Symengine.Internal
-
-
-
--- Dense Matrices

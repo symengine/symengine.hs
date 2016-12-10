@@ -63,7 +63,7 @@ vecbasic_push_back vec sym =  with2 vec sym (\v p ->vecbasic_push_back_ffi v p)
 vecbasic_get :: VecBasic -> Int -> Either SymengineException BasicSym
 vecbasic_get vec i =
   if i >= 0 && i < vecbasic_size vec
-  then 
+  then
     unsafePerformIO $ do
     sym <- basicsym_new
     exception <- cIntToEnum <$> with2 vec sym (\v s -> vecbasic_get_ffi v i s)

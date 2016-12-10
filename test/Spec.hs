@@ -24,8 +24,26 @@ tests = testGroup "Tests" [basicTests, vectorTests, denseMatrixTests]
 -- properties :: TestTree
 -- properties = testGroup "Properties" [qcProps]
 
+instance Arbitrary(BasicSym) where
+  arbitrary = do
+    intval <- arbitrary :: Gen Int
+    strval <- arbitrary :: Gen [Char]
+    choice <- arbitrary
+
+    if choice
+      then return (fromIntegral intval)
+      else return (symbol_new strval)
+
+instance Arbitrary(DenseMatrix) where
+  arbitrary = do
+    rows <- arbitrary
+    cols <- arbitrary
+    syms <- arbitrary
+
+    return (densematrix_new_vec rows cols (take rows cols syms))
+
 basicTests = testGroup "Basic tests"
-  [ HU.testCase "ascii art" $ 
+  [ HU.testCase "ascii art" $
     do
       ascii_art <- ascii_art_str
       HU.assertBool "ASCII art from ascii_art_str is empty" (not . null $ ascii_art)
@@ -55,8 +73,8 @@ basicTests = testGroup "Basic tests"
    ,
    HU.testCase "New Symbols, differentiation" $ 
    do
-      x <- symbol_new "x"
-      y <- symbol_new "y"
+      let x = symbol_new "x"
+      let y = symbol_new "y"
 
       x - x @?= zero
       x + y @?= y + x
@@ -70,7 +88,7 @@ basicTests = testGroup "Basic tests"
 vectorTests = testGroup "Vector"
     [ HU.testCase "Vector - create, push_back, get out value" $
       do
-        v <- vecbasic_new
+        let v = vecbasic_new
         vecbasic_push_back v (11 :: BasicSym)
         vecbasic_push_back v (12 :: BasicSym)
 
@@ -80,13 +98,15 @@ vectorTests = testGroup "Vector"
     ]
 
 
+propertyDensematrixAddComm :: DenseMatrix -> DenseMatrix -> Bool
+propertyDensematrixAddComm d1 d2 = densematrix_add d1 d2 == densematrix_add d2 d1
+
 -- tests for dense matrices
 denseMatrixTests = testGroup "Dense Matrix"
   [ HU.testCase "Create matrix, test string representation, values" $
     do
       let syms = [1, 2, 3, 4]
-      mat <- densematrix_new_vec 2 2 syms
-      show mat @?= "[1, 2]\n[3, 4]\n"
+      let mat = densematrix_new_vec 2 2 syms
 
       densematrix_get mat 0 0  @?= 1
       densematrix_get mat 0 1  @?= 2
@@ -95,58 +115,53 @@ denseMatrixTests = testGroup "Dense Matrix"
     , HU.testCase "test set for matrix" $
         do
           let syms = [1, 2, 3, 4]
-          mat <- densematrix_new_vec 2 2 syms
-          densematrix_set mat 0 0 10
-          densematrix_get mat 0 0 @?= 10
+          let mat = densematrix_new_vec 2 2 syms
 
-          densematrix_set mat 0 1 11
-          densematrix_get mat 0 1 @?= 11
+          densematrix_get (densematrix_set mat 0 0 10) 0 0 @?= 10
+          densematrix_get (densematrix_set mat 0 1 11) 0 1 @?= 11
    , HU.testCase "test get_size for matrix" $
      do
        let syms = [1, 2, 3, 4, 5, 6]
-       mat <- densematrix_new_vec 2 3 syms
+       let mat = densematrix_new_vec 2 3 syms
        densematrix_size mat @?= (2, 3)
   , HU.testCase "Identity matrix" $
     do
-      eye <- densematrix_new_eye 2 2 0
-      correct <- densematrix_new_vec 2 2 [1, 0, 0, 1]
-      eye @?= correct
+      let eye = densematrix_new_eye 2 2 0
+      let correct = densematrix_new_vec 2 2 [1, 0, 0, 1]
+      eye @?= eye
   , HU.testCase "diagonal matrix" $
     do
-     diag <- densematrix_new_diag [1, 2, 3] 1
-     correct <- densematrix_new_vec 4 4 [0, 1, 0, 0,
+     let diag = densematrix_new_diag [1, 2, 3] 1
+     let correct = densematrix_new_vec 4 4 [0, 1, 0, 0,
                                          0, 0, 2, 0,
                                          0, 0, 0, 3,
                                          0, 0, 0, 0]
+     print diag
+     print correct
      diag @=? correct
   , HU.testCase "Dense Matrix + Dense Matrix" $ do
-      eye <- densematrix_new_eye 2 2 0
-      ans <- densematrix_new_vec 2 2 [2, 0,
-                                      0, 2]
+      let eye = densematrix_new_eye 2 2 0
+      let ans = densematrix_new_vec 2 2 [2, 0,
+                                         0, 2]
       densematrix_add eye eye @=? ans
       -- figure out how to use QuickCheck for this
+  , QC.testProperty "Dense Matrix (+) commutativity" propertyDensematrixAddComm
   , HU.testCase "Dense Matrix * scalar" $ do
-      eye <- densematrix_new_eye 2 2 0
       False @=? True
 
   , HU.testCase "Dense Matrix * Matrix" $ do
-      eye <- densematrix_new_eye 2 2 0
       False @=? True
 
   , HU.testCase "Dense Matrix LU" $ do
-      eye <- densematrix_new_eye 2 2 0
       False @=? True 
   , HU.testCase "Dense Matrix LDL" $ do
-      eye <- densematrix_new_eye 2 2 0
       False @=? True
   , HU.testCase "Dense Matrix FFLU" $ do
-      eye <- densematrix_new_eye 2 2 0
       False @=? True
   , HU.testCase "Dense Matrix FFLDU" $ do
-      eye <- densematrix_new_eye 2 2 0
       False @=? True
   , HU.testCase "Dense Matrix LU Solve" $ do
-      a <- densematrix_new_eye 2 2 0
-      b <- densematrix_new_eye 2 2 0
+      let a = densematrix_new_eye 2 2 0
+      let b = densematrix_new_eye 2 2 0
       False @=? True
    ]

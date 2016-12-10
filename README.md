@@ -108,3 +108,7 @@ when I pass it through something like `densematrix_diag`
 
 
 * `densematrix_new_vec  2 3 []` crashes. We need to check for this in our code
+
+
+* What exactly does 'unsafePerformIO' do? why does `unsafePerformIO` on `basicsym_new`
+yield weird as hell errors?

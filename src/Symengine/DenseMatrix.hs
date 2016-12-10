@@ -4,7 +4,7 @@
 module Symengine.DenseMatrix
   (
    DenseMatrix,
-   densematrix_new,
+   -- densematrix_new,
    densematrix_new_vec,
    densematrix_new_eye,
    densematrix_new_diag,
@@ -65,12 +65,12 @@ densematrix_new = DenseMatrix <$> (mkForeignPtr cdensematrix_new_ffi cdensematri
 type NRows = Int
 type NCols = Int
 
-densematrix_new_rows_cols :: NRows -> NCols -> IO DenseMatrix
-densematrix_new_rows_cols r c =  DenseMatrix <$>
+densematrix_new_rows_cols :: NRows -> NCols -> DenseMatrix
+densematrix_new_rows_cols r c = unsafePerformIO $ DenseMatrix <$>
   mkForeignPtr (cdensematrix_new_rows_cols_ffi (fromIntegral r) (fromIntegral c)) cdensematrix_free_ffi
 
-densematrix_new_vec :: NRows -> NCols -> [BasicSym] -> IO DenseMatrix
-densematrix_new_vec r c syms = do
+densematrix_new_vec :: NRows -> NCols -> [BasicSym] -> DenseMatrix
+densematrix_new_vec r c syms = unsafePerformIO $ do
   vec <- list_to_vecbasic syms
   let cdensemat =  with vec (\v ->  cdensematrix_new_vec_ffi (fromIntegral r) (fromIntegral c) v)
   DenseMatrix <$>  mkForeignPtr cdensemat cdensematrix_free_ffi
@@ -78,9 +78,9 @@ densematrix_new_vec r c syms = do
 
 type Offset = Int
 -- create a matrix with 1's on the diagonal offset by offset
-densematrix_new_eye :: NRows -> NCols -> Offset -> IO DenseMatrix
-densematrix_new_eye r c offset = do
-  mat <- densematrix_new_rows_cols r c
+densematrix_new_eye :: NRows -> NCols -> Offset -> DenseMatrix
+densematrix_new_eye r c offset = unsafePerformIO $ do
+  let mat = densematrix_new_rows_cols r c
   with mat (\m -> cdensematrix_eye_ffi m
                  (fromIntegral r)
                  (fromIntegral c)
@@ -88,11 +88,11 @@ densematrix_new_eye r c offset = do
   return mat
 
 -- create a matrix with diagonal elements at offest k
-densematrix_new_diag :: [BasicSym] -> Int -> IO DenseMatrix
-densematrix_new_diag syms offset = do
+densematrix_new_diag :: [BasicSym] -> Int -> DenseMatrix
+densematrix_new_diag syms offset = unsafePerformIO $ do
   let dim = length syms
   vecsyms <- list_to_vecbasic syms
-  mat <- densematrix_new_rows_cols dim dim
+  let mat = densematrix_new_rows_cols dim dim
   with2 mat vecsyms (\m vs -> cdensematrix_diag_ffi m vs (fromIntegral offset))
 
   return mat
@@ -106,9 +106,10 @@ densematrix_get mat r c = unsafePerformIO $ do
       with2 mat sym (\m s -> cdensematrix_get_basic_ffi s m (fromIntegral r) (fromIntegral c))
       return sym
 
-densematrix_set :: DenseMatrix -> Row -> Col -> BasicSym -> IO ()
-densematrix_set mat r c sym =
+densematrix_set :: DenseMatrix -> Row -> Col -> BasicSym -> DenseMatrix
+densematrix_set mat r c sym = unsafePerformIO $ do
     with2 mat sym (\m s -> cdensematrix_set_basic_ffi m (fromIntegral r) (fromIntegral c) s)
+    return mat
 
 
 -- | provides dimenions of matrix. combination of the FFI calls
