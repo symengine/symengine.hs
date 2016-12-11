@@ -1,11 +1,24 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeOperators #-}
+-- to write things like KnownNat(r * c) => ...
+{-# LANGUAGE FlexibleContexts #-}
+-- @
+{-# LANGUAGE TypeApplications #-}
+-- to bring stuff like (r, c) into scope
+{-# LANGUAGE ScopedTypeVariables #-}
+
+
 module Symengine.DenseMatrix
   (
    DenseMatrix,
    -- densematrix_new,
    densematrix_new_vec,
+   {-
    densematrix_new_eye,
    densematrix_new_diag,
    densematrix_get,
@@ -21,7 +34,9 @@ module Symengine.DenseMatrix
    densematrix_ldl,
    densematrix_fflu,
    densematrix_ffldu,
-   densematrix_lu_solve)
+   densematrix_lu_solve
+   -}
+   )
 where
 
 import Prelude
@@ -37,58 +52,74 @@ import Control.Monad -- for foldM
 import System.IO.Unsafe
 import Control.Monad
 import GHC.Real
+import Data.Proxy
+
+import GHC.TypeLits -- type level programming
+import qualified Data.Vector.Sized as V -- sized vectors
 
 import Symengine.Internal
 import Symengine.BasicSym
 import Symengine.VecBasic
-
 data CDenseMatrix = CDenseMatrix
-newtype  DenseMatrix = DenseMatrix (ForeignPtr CDenseMatrix)
+data  DenseMatrix :: Nat -> Nat -> * where
+  -- allow constructing raw DenseMatrix from a constructor
+  DenseMatrix :: (KnownNat r, KnownNat c) => (ForeignPtr CDenseMatrix) -> DenseMatrix r c
 
-instance Wrapped DenseMatrix CDenseMatrix where
+instance  (KnownNat r, KnownNat c) => Wrapped (DenseMatrix  r c) CDenseMatrix where
     with (DenseMatrix p) f = withForeignPtr p f
 
-instance Show (DenseMatrix) where
-  show :: DenseMatrix -> String
+instance  (KnownNat r, KnownNat c) =>  Show (DenseMatrix r c) where
+  show :: DenseMatrix r c -> String
   show mat =
     unsafePerformIO $ with mat  (cdensematrix_str_ffi >=> peekCString)
 
-instance Eq (DenseMatrix) where
-  (==) :: DenseMatrix -> DenseMatrix -> Bool
+instance (KnownNat r, KnownNat c) => Eq (DenseMatrix r c) where
+  (==) :: DenseMatrix r c -> DenseMatrix r c -> Bool
   (==) mat1 mat2 = 
     1 == fromIntegral (unsafePerformIO $
                        with2 mat1 mat2 cdensematrix_eq_ffi)
 
-densematrix_new :: IO DenseMatrix
+densematrix_new :: (KnownNat r, KnownNat c) => IO (DenseMatrix r c)
 densematrix_new = DenseMatrix <$> (mkForeignPtr cdensematrix_new_ffi cdensematrix_free_ffi)
 
 type NRows = Int
 type NCols = Int
 
-densematrix_new_rows_cols :: NRows -> NCols -> DenseMatrix
-densematrix_new_rows_cols r c = unsafePerformIO $ DenseMatrix <$>
-  mkForeignPtr (cdensematrix_new_rows_cols_ffi (fromIntegral r) (fromIntegral c)) cdensematrix_free_ffi
+densematrix_new_rows_cols ::  forall r c . (KnownNat r, KnownNat c) => DenseMatrix r c
+densematrix_new_rows_cols = 
+    unsafePerformIO $ DenseMatrix <$>
+      (mkForeignPtr (cdensematrix_new_rows_cols_ffi 
+                      (fromIntegral . natVal $ (Proxy @ r))
+                      (fromIntegral . natVal $ (Proxy @ c)))
+                      cdensematrix_free_ffi)
+  
 
-densematrix_new_vec :: NRows -> NCols -> [BasicSym] -> DenseMatrix
-densematrix_new_vec r c syms = unsafePerformIO $ do
-  vec <- list_to_vecbasic syms
-  let cdensemat =  with vec (\v ->  cdensematrix_new_vec_ffi (fromIntegral r) (fromIntegral c) v)
+--
+-- HACK: figure out how to check correctness of length [BasicSym] == r * c
+densematrix_new_vec :: forall r c. (KnownNat r, KnownNat c, KnownNat (r * c)) => V.Vector (r * c) BasicSym -> DenseMatrix r c
+densematrix_new_vec syms = unsafePerformIO $ do
+  vec <- vector_to_vecbasic syms
+  let cdensemat =  with vec (\v -> cdensematrix_new_vec_ffi
+                                     (fromIntegral . natVal $ (Proxy @ r))
+                                     (fromIntegral . natVal $ (Proxy @ c)) v)
   DenseMatrix <$>  mkForeignPtr cdensemat cdensematrix_free_ffi
 
+{-
 
 type Offset = Int
 -- create a matrix with 1's on the diagonal offset by offset
-densematrix_new_eye :: NRows -> NCols -> Offset -> DenseMatrix
-densematrix_new_eye r c offset = unsafePerformIO $ do
+-- HACK: this is not even true
+densematrix_new_eye :: forall r c. KnownNat r => KnownNat c =>  Offset -> DenseMatrix r c
+densematrix_new_eye offset = unsafePerformIO $ do
   let mat = densematrix_new_rows_cols r c
   with mat (\m -> cdensematrix_eye_ffi m
-                 (fromIntegral r)
-                 (fromIntegral c)
-                 (fromIntegral offset))
+                 (natVal (Proxy @ r))
+                 (natVal (Proxy @ c))
+                 offset)
   return mat
 
--- create a matrix with diagonal elements at offest k
-densematrix_new_diag :: [BasicSym] -> Int -> DenseMatrix
+-- create a matrix with diagonal elements d at offest k
+densematrix_new_diag :: (KnownNat d, KnownNat k) => V.Vector d BasicSym -> DenseMatrix (d + k) (d + k)
 densematrix_new_diag syms offset = unsafePerformIO $ do
   let dim = length syms
   vecsyms <- list_to_vecbasic syms
@@ -100,7 +131,11 @@ densematrix_new_diag syms offset = unsafePerformIO $ do
 type Row = Int
 type Col = Int
 
-densematrix_get :: DenseMatrix -> Row -> Col -> BasicSym
+data Indexer :: Nat -> Nat -> * where
+  Indexer :: (KnownNat r, KnownNat c) => Indexer r c
+
+densematrix_get :: (KnownNat r, KnownNat c, KnownNat getr, KnownNat getc,
+                    0 <= r,  0 <= c) => DenseMatrix r c -> Indexer getr getc  -> BasicSym
 densematrix_get mat r c = unsafePerformIO $ do
       sym <- basicsym_new
       with2 mat sym (\m s -> cdensematrix_get_basic_ffi s m (fromIntegral r) (fromIntegral c))
@@ -141,18 +176,18 @@ densematrix_mul_scalar mata sym = unsafePerformIO $ do
    return res
 
 
-newtype L = L DenseMatrix
-newtype U = U DenseMatrix
+newtype L r c = L (DenseMatrix r c)
+newtype U r c = U (DenseMatrix r c)
 
-densematrix_lu :: DenseMatrix -> (L, U)
+densematrix_lu :: (KnownNat r, KnownNat c) =>  DenseMatrix -> (L, U)
 densematrix_lu mat = unsafePerformIO $ do
    l <- densematrix_new
    u <- densematrix_new
    with3 l u mat cdensematrix_lu
    return (L l, U u)
 
-newtype D = D DenseMatrix
-densematrix_ldl :: DenseMatrix -> (L, D)
+newtype D r c = D (DenseMatrix r c)
+densematrix_ldl :: (KnownNat r, KnownNat c) =>  DenseMatrix -> (L, D)
 densematrix_ldl mat = unsafePerformIO $ do
   l <- densematrix_new
   d <- densematrix_new
@@ -161,15 +196,15 @@ densematrix_ldl mat = unsafePerformIO $ do
   return (L l, D d)
 
 
-newtype FFLU = FFLU DenseMatrix
-densematrix_fflu :: DenseMatrix -> FFLU
+newtype FFLU r c = FFLU (DenseMatrix r c)
+densematrix_fflu :: (KnownNat r, KnownNat c) => DenseMatrix r c -> FFLU r c
 densematrix_fflu mat = unsafePerformIO $ do
   fflu <- densematrix_new
   with2 fflu mat cdensematrix_fflu
   return (FFLU fflu)
 
 
-densematrix_ffldu :: DenseMatrix -> (L, D, U)
+densematrix_ffldu ::  (KnownNat r, KnownNat c) => DenseMatrix r c -> (L r c, D r c, U r c)
 densematrix_ffldu mat = unsafePerformIO $ do
   l <- densematrix_new
   d <- densematrix_new
@@ -180,11 +215,12 @@ densematrix_ffldu mat = unsafePerformIO $ do
 
 -- solve A x = B
 -- A is first param, B is second larameter
-densematrix_lu_solve :: DenseMatrix -> DenseMatrix -> DenseMatrix
+densematrix_lu_solve :: (KnownNat r, KnownNat c) => DenseMatrix r c -> DenseMatrix r c -> DenseMatrix r c
 densematrix_lu_solve a b = unsafePerformIO $ do
   x <- densematrix_new
   with3 x a b cdensematrix_lu_solve
   return x
+-}
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_new" cdensematrix_new_ffi :: IO (Ptr CDenseMatrix)
 foreign import ccall "symengine/cwrapper.h &dense_matrix_free" cdensematrix_free_ffi :: FunPtr ((Ptr CDenseMatrix) -> IO ())

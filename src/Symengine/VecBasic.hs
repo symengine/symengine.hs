@@ -1,6 +1,14 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeOperators #-}
+-- @
+{-# LANGUAGE TypeApplications #-}
+-- to bring stuff like (r, c) into scope
+{-# LANGUAGE ScopedTypeVariables #-}
 module Symengine.VecBasic
   (
     VecBasic,
@@ -8,7 +16,7 @@ module Symengine.VecBasic
     vecbasic_push_back,
     vecbasic_get,
     vecbasic_size,
-    list_to_vecbasic,
+    vector_to_vecbasic,
    )
 where
 
@@ -27,6 +35,9 @@ import System.IO.Unsafe
 import Control.Monad
 import GHC.Real
 import Symengine
+
+import GHC.TypeLits -- type level programming
+import qualified Data.Vector.Sized as V -- sized vectors
 
 import Symengine.Internal
 import Symengine.BasicSym
@@ -82,8 +93,8 @@ vecbasic_new = do
     return $ VecBasic (finalized)
 
 
-list_to_vecbasic :: [BasicSym] -> IO VecBasic
-list_to_vecbasic syms = do
+vector_to_vecbasic :: forall n. KnownNat n => V.Vector n BasicSym -> IO VecBasic
+vector_to_vecbasic syms = do
   vec <- vecbasic_new
   forM_ syms (\s -> vecbasic_push_back vec s)
   return vec

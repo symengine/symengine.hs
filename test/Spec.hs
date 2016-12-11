@@ -36,11 +36,10 @@ instance Arbitrary(BasicSym) where
 
 instance Arbitrary(DenseMatrix) where
   arbitrary = do
-    rows <- arbitrary
-    cols <- arbitrary
+    let (rows, cols) = (30, 30)
     syms <- arbitrary
 
-    return (densematrix_new_vec rows cols (take rows cols syms))
+    return (densematrix_new_vec rows cols (take (rows * cols) syms))
 
 basicTests = testGroup "Basic tests"
   [ HU.testCase "ascii art" $
@@ -88,7 +87,7 @@ basicTests = testGroup "Basic tests"
 vectorTests = testGroup "Vector"
     [ HU.testCase "Vector - create, push_back, get out value" $
       do
-        let v = vecbasic_new
+        v <- vecbasic_new
         vecbasic_push_back v (11 :: BasicSym)
         vecbasic_push_back v (12 :: BasicSym)
 
@@ -98,8 +97,6 @@ vectorTests = testGroup "Vector"
     ]
 
 
-propertyDensematrixAddComm :: DenseMatrix -> DenseMatrix -> Bool
-propertyDensematrixAddComm d1 d2 = densematrix_add d1 d2 == densematrix_add d2 d1
 
 -- tests for dense matrices
 denseMatrixTests = testGroup "Dense Matrix"
@@ -136,19 +133,13 @@ denseMatrixTests = testGroup "Dense Matrix"
                                          0, 0, 2, 0,
                                          0, 0, 0, 3,
                                          0, 0, 0, 0]
-     print diag
-     print correct
      diag @=? correct
-  , HU.testCase "Dense Matrix + Dense Matrix" $ do
-      let eye = densematrix_new_eye 2 2 0
-      let ans = densematrix_new_vec 2 2 [2, 0,
-                                         0, 2]
-      densematrix_add eye eye @=? ans
-      -- figure out how to use QuickCheck for this
-  , QC.testProperty "Dense Matrix (+) commutativity" propertyDensematrixAddComm
+  , QC.testProperty "Dense Matrix (+) commutativity"
+        (\a b -> densematrix_add a b == densematrix_add b a)
+  , QC.testProperty "Dense Matrix (+) asociativity"
+        (\ a b c -> densematrix_add a (densematrix_add b c) == densematrix_add (densematrix_add a b) c)
   , HU.testCase "Dense Matrix * scalar" $ do
       False @=? True
-
   , HU.testCase "Dense Matrix * Matrix" $ do
       False @=? True
 
