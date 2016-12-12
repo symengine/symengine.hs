@@ -12,6 +12,9 @@
 -- to bring stuff like (r, c) into scope
 {-# LANGUAGE ScopedTypeVariables #-}
 
+-- allow non injective type functions (+)
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 
 module Symengine.DenseMatrix
   (
@@ -94,8 +97,6 @@ densematrix_new_rows_cols =
                       cdensematrix_free_ffi)
   
 
---
--- HACK: figure out how to check correctness of length [BasicSym] == r * c
 densematrix_new_vec :: forall r c. (KnownNat r, KnownNat c, KnownNat (r * c)) => V.Vector (r * c) BasicSym -> DenseMatrix r c
 densematrix_new_vec syms = unsafePerformIO $ do
   vec <- vector_to_vecbasic syms
@@ -104,30 +105,31 @@ densematrix_new_vec syms = unsafePerformIO $ do
                                      (fromIntegral . natVal $ (Proxy @ c)) v)
   DenseMatrix <$>  mkForeignPtr cdensemat cdensematrix_free_ffi
 
-{-
 
 type Offset = Int
--- create a matrix with 1's on the diagonal offset by offset
--- HACK: this is not even true
-densematrix_new_eye :: forall r c. KnownNat r => KnownNat c =>  Offset -> DenseMatrix r c
-densematrix_new_eye offset = unsafePerformIO $ do
-  let mat = densematrix_new_rows_cols r c
+-- |create a matrix with rows 'r, cols 'c' and offset 'k'
+densematrix_new_eye :: forall r c k. (KnownNat r,  KnownNat c, KnownNat k, KnownNat (r + k), KnownNat (c + k)) => DenseMatrix (r + k) (c + k)
+densematrix_new_eye = unsafePerformIO $ do
+  let mat = densematrix_new_rows_cols
   with mat (\m -> cdensematrix_eye_ffi m
-                 (natVal (Proxy @ r))
-                 (natVal (Proxy @ c))
-                 offset)
+                 (fromIntegral . natVal $ (Proxy @ r))
+                 (fromIntegral . natVal $ (Proxy @ c))
+                 (fromIntegral . natVal $ (Proxy @ k)))
   return mat
 
--- create a matrix with diagonal elements d at offest k
-densematrix_new_diag :: (KnownNat d, KnownNat k) => V.Vector d BasicSym -> DenseMatrix (d + k) (d + k)
-densematrix_new_diag syms offset = unsafePerformIO $ do
-  let dim = length syms
-  vecsyms <- list_to_vecbasic syms
-  let mat = densematrix_new_rows_cols dim dim
-  with2 mat vecsyms (\m vs -> cdensematrix_diag_ffi m vs (fromIntegral offset))
+-- create a matrix with diagonal elements of length 'd', offset 'k'
+densematrix_new_diag :: forall d k. (KnownNat d, KnownNat k, KnownNat (d + k)) => V.Vector d BasicSym -> DenseMatrix (d + k) (d + k)
+densematrix_new_diag syms  = unsafePerformIO $ do
+  let offset = fromIntegral $ natVal (Proxy @ k)
+  let diagonal = fromIntegral $ natVal (Proxy @ d)
+  let dim = offset + diagonal
+  vecsyms <- vector_to_vecbasic syms
+  let mat = densematrix_new_rows_cols :: DenseMatrix (d + k) (d + k)
+  with2 mat vecsyms (\m syms -> cdensematrix_diag_ffi m syms offset)
 
   return mat
 
+{-
 type Row = Int
 type Col = Int
 
