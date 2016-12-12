@@ -21,10 +21,10 @@ module Symengine.DenseMatrix
    DenseMatrix,
    -- densematrix_new,
    densematrix_new_vec,
-   {-
    densematrix_new_eye,
    densematrix_new_diag,
    densematrix_get,
+   {-
    densematrix_set,
    densematrix_size,
    -- arithmetic
@@ -108,7 +108,7 @@ densematrix_new_vec syms = unsafePerformIO $ do
 
 type Offset = Int
 -- |create a matrix with rows 'r, cols 'c' and offset 'k'
-densematrix_new_eye :: forall r c k. (KnownNat r,  KnownNat c, KnownNat k, KnownNat (r + k), KnownNat (c + k)) => DenseMatrix (r + k) (c + k)
+densematrix_new_eye :: forall k r c. (KnownNat r,  KnownNat c, KnownNat k, KnownNat (r + k), KnownNat (c + k)) => DenseMatrix (r + k) (c + k)
 densematrix_new_eye = unsafePerformIO $ do
   let mat = densematrix_new_rows_cols
   with mat (\m -> cdensematrix_eye_ffi m
@@ -118,7 +118,7 @@ densematrix_new_eye = unsafePerformIO $ do
   return mat
 
 -- create a matrix with diagonal elements of length 'd', offset 'k'
-densematrix_new_diag :: forall d k. (KnownNat d, KnownNat k, KnownNat (d + k)) => V.Vector d BasicSym -> DenseMatrix (d + k) (d + k)
+densematrix_new_diag :: forall k d. (KnownNat d, KnownNat k, KnownNat (d + k)) => V.Vector d BasicSym -> DenseMatrix (d + k) (d + k)
 densematrix_new_diag syms  = unsafePerformIO $ do
   let offset = fromIntegral $ natVal (Proxy @ k)
   let diagonal = fromIntegral $ natVal (Proxy @ d)
@@ -129,20 +129,21 @@ densematrix_new_diag syms  = unsafePerformIO $ do
 
   return mat
 
-{-
 type Row = Int
 type Col = Int
 
-data Indexer :: Nat -> Nat -> * where
-  Indexer :: (KnownNat r, KnownNat c) => Indexer r c
 
-densematrix_get :: (KnownNat r, KnownNat c, KnownNat getr, KnownNat getc,
-                    0 <= r,  0 <= c) => DenseMatrix r c -> Indexer getr getc  -> BasicSym
-densematrix_get mat r c = unsafePerformIO $ do
+
+densematrix_get :: forall r c getr getc. (KnownNat r, KnownNat c, KnownNat getr, KnownNat getc,
+                    0 <= getr, 0 <= getc, getr <= r - 1, getc <= c - 1) => DenseMatrix r c -> BasicSym
+densematrix_get mat = unsafePerformIO $ do
       sym <- basicsym_new
-      with2 mat sym (\m s -> cdensematrix_get_basic_ffi s m (fromIntegral r) (fromIntegral c))
+      let indexr = fromIntegral $ natVal (Proxy @ getr)
+      let indexc = fromIntegral $ natVal (Proxy @ getc)
+      with2 mat sym (\m s -> cdensematrix_get_basic_ffi s m indexr indexc)
       return sym
 
+{-
 densematrix_set :: DenseMatrix -> Row -> Col -> BasicSym -> DenseMatrix
 densematrix_set mat r c sym = unsafePerformIO $ do
     with2 mat sym (\m s -> cdensematrix_set_basic_ffi m (fromIntegral r) (fromIntegral c) s)

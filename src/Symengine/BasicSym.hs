@@ -39,16 +39,6 @@ newtype BasicSym = BasicSym (ForeignPtr CBasicSym)
 instance Wrapped BasicSym CBasicSym where
   with (BasicSym (p)) f = withForeignPtr p f
   
- {-
-withBasicSym :: BasicSym -> (Ptr CBasicSym -> IO a) -> IO a
-withBasicSym (BasicSym ptr) = withForeignPtr ptr
-
-withBasicSym2 :: BasicSym -> BasicSym -> (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> IO a
-withBasicSym2 p1 p2 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> f p1 p2))
-
-withBasicSym3 :: BasicSym -> BasicSym -> BasicSym -> (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> IO a
-withBasicSym3 p1 p2 p3 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> withBasicSym p3 (\p3 -> f p1 p2 p3)))
--}
 
 -- | constructor for 0
 zero :: BasicSym
