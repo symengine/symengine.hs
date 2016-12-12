@@ -24,9 +24,9 @@ module Symengine.DenseMatrix
    densematrix_new_eye,
    densematrix_new_diag,
    densematrix_get,
-   {-
    densematrix_set,
    densematrix_size,
+   {-
    -- arithmetic
    densematrix_add,
    densematrix_mul_matrix,
@@ -59,6 +59,7 @@ import Data.Proxy
 
 import GHC.TypeLits -- type level programming
 import qualified Data.Vector.Sized as V -- sized vectors
+import Data.Finite -- types to represent numbers
 
 import Symengine.Internal
 import Symengine.BasicSym
@@ -85,8 +86,6 @@ instance (KnownNat r, KnownNat c) => Eq (DenseMatrix r c) where
 densematrix_new :: (KnownNat r, KnownNat c) => IO (DenseMatrix r c)
 densematrix_new = DenseMatrix <$> (mkForeignPtr cdensematrix_new_ffi cdensematrix_free_ffi)
 
-type NRows = Int
-type NCols = Int
 
 densematrix_new_rows_cols ::  forall r c . (KnownNat r, KnownNat c) => DenseMatrix r c
 densematrix_new_rows_cols = 
@@ -134,45 +133,54 @@ type Col = Int
 
 
 
-densematrix_get :: forall r c getr getc. (KnownNat r, KnownNat c, KnownNat getr, KnownNat getc,
-                    0 <= getr, 0 <= getc, getr <= r - 1, getc <= c - 1) => DenseMatrix r c -> BasicSym
-densematrix_get mat = unsafePerformIO $ do
+densematrix_get :: forall r c. (KnownNat r, KnownNat c) => 
+  DenseMatrix r c -> Finite r -> Finite c -> BasicSym
+densematrix_get mat getr getc = unsafePerformIO $ do
       sym <- basicsym_new
-      let indexr = fromIntegral $ natVal (Proxy @ getr)
-      let indexc = fromIntegral $ natVal (Proxy @ getc)
+      let indexr = fromIntegral $ (getFinite getr)
+      let indexc = fromIntegral $ (getFinite getc)
       with2 mat sym (\m s -> cdensematrix_get_basic_ffi s m indexr indexc)
       return sym
 
-{-
-densematrix_set :: DenseMatrix -> Row -> Col -> BasicSym -> DenseMatrix
+densematrix_set :: forall r c. (KnownNat r, KnownNat c) => 
+  DenseMatrix r c -> Finite r -> Finite c -> BasicSym -> DenseMatrix r c
 densematrix_set mat r c sym = unsafePerformIO $ do
-    with2 mat sym (\m s -> cdensematrix_set_basic_ffi m (fromIntegral r) (fromIntegral c) s)
+    with2 mat sym (\m s -> cdensematrix_set_basic_ffi 
+                              m
+                              (fromIntegral . getFinite $ r)
+                              (fromIntegral . getFinite $ c)
+                              s)
     return mat
 
 
+type NRows = Int
+type NCols = Int
+
 -- | provides dimenions of matrix. combination of the FFI calls
 -- `dense_matrix_rows` and `dense_matrix_cols`
-densematrix_size :: DenseMatrix -> (NRows, NCols)
-densematrix_size mat = unsafePerformIO $  do
-   rs <- with mat cdensematrix_rows_ffi
-   cs <- with mat cdensematrix_cols_ffi
-   return (fromIntegral rs, fromIntegral cs)
+densematrix_size :: forall r c. (KnownNat r, KnownNat c) => 
+  DenseMatrix r c -> (NRows, NCols)
+densematrix_size mat = 
+   (fromIntegral . natVal $ (Proxy @ r), fromIntegral . natVal $ (Proxy @ c))
 
-densematrix_add :: DenseMatrix -> DenseMatrix -> DenseMatrix
+densematrix_add :: forall r c. (KnownNat r, KnownNat c) => 
+  DenseMatrix r c-> DenseMatrix r c -> DenseMatrix r c
 densematrix_add mata matb = unsafePerformIO $ do
    res <- densematrix_new
    with3 res mata matb cdensematrix_add_matrix
    return res
 
 
-densematrix_mul_matrix :: DenseMatrix -> DenseMatrix -> DenseMatrix
+densematrix_mul_matrix :: forall r k c. (KnownNat r, KnownNat k, KnownNat c) => 
+  DenseMatrix r k -> DenseMatrix k c -> DenseMatrix r c
 densematrix_mul_matrix mata matb = unsafePerformIO $ do
    res <- densematrix_new
    with3 res mata matb cdensematrix_mul_matrix
    return res
 
 
-densematrix_mul_scalar :: DenseMatrix -> BasicSym -> DenseMatrix
+densematrix_mul_scalar :: forall r c. (KnownNat r, KnownNat c) => 
+  DenseMatrix r c -> BasicSym -> DenseMatrix r c
 densematrix_mul_scalar mata sym = unsafePerformIO $ do
    res <- densematrix_new
    with3 res mata sym cdensematrix_mul_scalar
@@ -182,7 +190,7 @@ densematrix_mul_scalar mata sym = unsafePerformIO $ do
 newtype L r c = L (DenseMatrix r c)
 newtype U r c = U (DenseMatrix r c)
 
-densematrix_lu :: (KnownNat r, KnownNat c) =>  DenseMatrix -> (L, U)
+densematrix_lu :: (KnownNat r, KnownNat c) => DenseMatrix r c-> (L r c, U r c)
 densematrix_lu mat = unsafePerformIO $ do
    l <- densematrix_new
    u <- densematrix_new
@@ -190,7 +198,7 @@ densematrix_lu mat = unsafePerformIO $ do
    return (L l, U u)
 
 newtype D r c = D (DenseMatrix r c)
-densematrix_ldl :: (KnownNat r, KnownNat c) =>  DenseMatrix -> (L, D)
+densematrix_ldl :: (KnownNat r, KnownNat c) => DenseMatrix r c-> (L r c, D r c)
 densematrix_ldl mat = unsafePerformIO $ do
   l <- densematrix_new
   d <- densematrix_new
@@ -207,7 +215,8 @@ densematrix_fflu mat = unsafePerformIO $ do
   return (FFLU fflu)
 
 
-densematrix_ffldu ::  (KnownNat r, KnownNat c) => DenseMatrix r c -> (L r c, D r c, U r c)
+densematrix_ffldu ::  (KnownNat r, KnownNat c) =>
+  DenseMatrix r c -> (L r c, D r c, U r c)
 densematrix_ffldu mat = unsafePerformIO $ do
   l <- densematrix_new
   d <- densematrix_new
@@ -218,12 +227,12 @@ densematrix_ffldu mat = unsafePerformIO $ do
 
 -- solve A x = B
 -- A is first param, B is second larameter
-densematrix_lu_solve :: (KnownNat r, KnownNat c) => DenseMatrix r c -> DenseMatrix r c -> DenseMatrix r c
+densematrix_lu_solve :: (KnownNat r, KnownNat c) => 
+  DenseMatrix r c -> DenseMatrix r c -> DenseMatrix r c
 densematrix_lu_solve a b = unsafePerformIO $ do
   x <- densematrix_new
   with3 x a b cdensematrix_lu_solve
   return x
--}
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_new" cdensematrix_new_ffi :: IO (Ptr CDenseMatrix)
 foreign import ccall "symengine/cwrapper.h &dense_matrix_free" cdensematrix_free_ffi :: FunPtr ((Ptr CDenseMatrix) -> IO ())
