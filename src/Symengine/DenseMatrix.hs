@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+  {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE DataKinds #-}
@@ -26,7 +26,7 @@ module Symengine.DenseMatrix
    densematrix_get,
    densematrix_set,
    densematrix_size,
-   {-
+   
    -- arithmetic
    densematrix_add,
    densematrix_mul_matrix,
@@ -38,7 +38,6 @@ module Symengine.DenseMatrix
    densematrix_fflu,
    densematrix_ffldu,
    densematrix_lu_solve
-   -}
    )
 where
 
@@ -86,6 +85,11 @@ instance (KnownNat r, KnownNat c) => Eq (DenseMatrix r c) where
 densematrix_new :: (KnownNat r, KnownNat c) => IO (DenseMatrix r c)
 densematrix_new = DenseMatrix <$> (mkForeignPtr cdensematrix_new_ffi cdensematrix_free_ffi)
 
+_densematrix_copy :: (KnownNat r, KnownNat c) => DenseMatrix r c -> IO (DenseMatrix r c)
+_densematrix_copy mat = do
+  newmat <- densematrix_new
+  with2 newmat mat cdensematrix_set_ffi
+  return newmat
 
 densematrix_new_rows_cols ::  forall r c . (KnownNat r, KnownNat c) => DenseMatrix r c
 densematrix_new_rows_cols = 
@@ -145,12 +149,13 @@ densematrix_get mat getr getc = unsafePerformIO $ do
 densematrix_set :: forall r c. (KnownNat r, KnownNat c) => 
   DenseMatrix r c -> Finite r -> Finite c -> BasicSym -> DenseMatrix r c
 densematrix_set mat r c sym = unsafePerformIO $ do
-    with2 mat sym (\m s -> cdensematrix_set_basic_ffi 
+    mat' <- _densematrix_copy mat
+    with2 mat' sym (\m s -> cdensematrix_set_basic_ffi 
                               m
                               (fromIntegral . getFinite $ r)
                               (fromIntegral . getFinite $ c)
                               s)
-    return mat
+    return mat'
 
 
 type NRows = Int
@@ -241,6 +246,7 @@ foreign import ccall "symengine/cwrapper.h dense_matrix_new_vec" cdensematrix_ne
 foreign import ccall "symengine/cwrapper.h dense_matrix_eye" cdensematrix_eye_ffi :: Ptr CDenseMatrix -> CULong -> CULong  -> CULong -> IO ()
 foreign import ccall "symengine/cwrapper.h dense_matrix_diag" cdensematrix_diag_ffi :: Ptr CDenseMatrix -> Ptr CVecBasic -> CULong  -> IO ()
 foreign import ccall "symengine/cwrapper.h dense_matrix_eq" cdensematrix_eq_ffi :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO CInt
+foreign import ccall "symengine/cwrapper.h dense_matrix_set" cdensematrix_set_ffi :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_str" cdensematrix_str_ffi :: Ptr CDenseMatrix -> IO CString
 

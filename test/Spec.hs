@@ -1,3 +1,22 @@
+-- for @
+{-# LANGUAGE TypeApplications #-}
+
+-- for forall r c capturing with Proxy
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- lift 2, 3, etc to type level
+{-# LANGUAGE DataKinds #-}
+
+
+-- for *, + in type sigs
+{-# LANGUAGE TypeOperators #-}
+
+
+-- for *, + in type sigs
+{-# LANGUAGE FlexibleContexts #-}
+
+-- for (*) which is not injective
+{-# LANGUAGE UndecidableInstances #-}
 import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 import Test.Tasty.HUnit as HU
@@ -11,6 +30,12 @@ import Symengine.DenseMatrix
 import Symengine.VecBasic
 import Symengine.BasicSym
 import Prelude hiding (pi)
+
+
+-- TODO: move arbitrary instance _inside_ the library
+import GHC.TypeLits
+import Data.Proxy
+import qualified Data.Vector.Sized as V
 
 main = defaultMain tests
 
@@ -34,12 +59,12 @@ instance Arbitrary(BasicSym) where
       then return (fromIntegral intval)
       else return (symbol_new strval)
 
-instance Arbitrary(DenseMatrix) where
+instance forall r c. (KnownNat r, KnownNat c, KnownNat (r * c)) => Arbitrary(DenseMatrix r c) where
   arbitrary = do
-    let (rows, cols) = (30, 30)
-    syms <- arbitrary
+    let (rows, cols) = (natVal (Proxy @ r), natVal (Proxy @ c))
+    syms <- V.replicateM arbitrary
 
-    return (densematrix_new_vec rows cols (take (rows * cols) syms))
+    return (densematrix_new_vec syms)
 
 basicTests = testGroup "Basic tests"
   [ HU.testCase "ascii art" $
@@ -97,25 +122,27 @@ vectorTests = testGroup "Vector"
     ]
 
 
-
 -- tests for dense matrices
 denseMatrixTests = testGroup "Dense Matrix"
-  [ HU.testCase "Create matrix, test string representation, values" $
+  [ HU.testCase "Create matrix, test getters" $ 
     do
-      let syms = [1, 2, 3, 4]
-      let mat = densematrix_new_vec 2 2 syms
+      let syms = V.generate (\pos -> fromIntegral (pos + 1))
+      let mat = densematrix_new_vec syms :: DenseMatrix 2 2
 
+      putStrLn ("matix in test getters:\n" ++ (show mat))
       densematrix_get mat 0 0  @?= 1
       densematrix_get mat 0 1  @?= 2
       densematrix_get mat 1 0  @?= 3
       densematrix_get mat 1 1  @?= 4
     , HU.testCase "test set for matrix" $
         do
-          let syms = [1, 2, 3, 4]
-          let mat = densematrix_new_vec 2 2 syms
+          let syms = V.generate (\pos -> fromIntegral (pos + 1))
+          let mat = densematrix_new_vec syms :: DenseMatrix 2 2
 
           densematrix_get (densematrix_set mat 0 0 10) 0 0 @?= 10
           densematrix_get (densematrix_set mat 0 1 11) 0 1 @?= 11
+  ]
+{-
    , HU.testCase "test get_size for matrix" $
      do
        let syms = [1, 2, 3, 4, 5, 6]
@@ -156,3 +183,4 @@ denseMatrixTests = testGroup "Dense Matrix"
       let b = densematrix_new_eye 2 2 0
       False @=? True
    ]
+-}
