@@ -112,3 +112,5 @@ when I pass it through something like `densematrix_diag`
 
 * What exactly does 'unsafePerformIO' do? why does `unsafePerformIO` on `basicsym_new`
 yield weird as hell errors?
+
+* take proper care of ref. transparency. eg: `densematrix_set`
