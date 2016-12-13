@@ -64,8 +64,7 @@ with3 o1 o2 o3 f = with2 o1 o2 (\p1 p2 -> with o3 (\p3 -> f p1 p2 p3))
 with4:: Wrapped o1 i1 => Wrapped o2 i2 => Wrapped o3 i3 => Wrapped o4 i4 => o1 -> o2 -> o3 -> o4 -> (Ptr i1 -> Ptr i2 -> Ptr i3 -> Ptr i4 -> IO a) -> IO a
 with4 o1 o2 o3 o4 f = with o1 (\p1 -> with3 o2 o3 o4 (\p2 p3 p4 -> f p1 p2 p3 p4))
 
-
---BasicSym
+-- BasicSym
 data CBasicSym = CBasicSym
 
 -- VecBasic

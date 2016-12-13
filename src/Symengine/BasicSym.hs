@@ -17,6 +17,8 @@ module Symengine.BasicSym(
      -- HACK: this should be internal :(
      basicsym_new,
      BasicSym,
+     lift_basicsym_binaryop,
+     lift_basicsym_unaryop
 )
 where
 
@@ -39,6 +41,14 @@ newtype BasicSym = BasicSym (ForeignPtr CBasicSym)
 instance Wrapped BasicSym CBasicSym where
   with (BasicSym (p)) f = withForeignPtr p f
   
+withBasicSym :: BasicSym -> (Ptr CBasicSym -> IO a) -> IO a
+withBasicSym (BasicSym ptr) = withForeignPtr ptr
+
+withBasicSym2 :: BasicSym -> BasicSym -> (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> IO a
+withBasicSym2 p1 p2 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> f p1 p2))
+
+withBasicSym3 :: BasicSym -> BasicSym -> BasicSym -> (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> IO a
+withBasicSym3 p1 p2 p3 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> withBasicSym p3 (\p3 -> f p1 p2 p3)))
 
 -- | constructor for 0
 zero :: BasicSym
@@ -65,7 +75,7 @@ e :: BasicSym
 e = basicsym_construct basic_const_E_ffi
 
 expand :: BasicSym -> BasicSym
-expand = basic_unaryop basic_expand_ffi
+expand = lift_basicsym_unaryop basic_expand_ffi
 
 
 eulerGamma :: BasicSym
@@ -119,29 +129,29 @@ basicsym_new = do
     finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi basic_ptr
     return $ BasicSym finalized_ptr
 
-basic_binaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym -> BasicSym
-basic_binaryop f a b = unsafePerformIO $ do
+lift_basicsym_binaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym -> BasicSym
+lift_basicsym_binaryop f a b = unsafePerformIO $ do
     s <- basicsym_new
     with3 s a b f
     return s
 
-basic_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym
-basic_unaryop f a = unsafePerformIO $ do
+lift_basicsym_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym
+lift_basicsym_unaryop f a = unsafePerformIO $ do
     s <- basicsym_new
     with2 s a f
     return s
 
 
 basic_pow :: BasicSym -> BasicSym -> BasicSym
-basic_pow = basic_binaryop basic_pow_ffi
+basic_pow = lift_basicsym_binaryop basic_pow_ffi
 
 -- |Create a rational number with numerator and denominator
 rational :: BasicSym -> BasicSym -> BasicSym
-rational = basic_binaryop rational_set_ffi
+rational = lift_basicsym_binaryop rational_set_ffi
 
 -- |Create a complex number a + b * im
 complex :: BasicSym -> BasicSym -> BasicSym
-complex a b = (basic_binaryop complex_set_ffi) a b
+complex a b = (lift_basicsym_binaryop complex_set_ffi) a b
 
 basic_rational_from_integer :: Integer -> Integer -> BasicSym
 basic_rational_from_integer i j = unsafePerformIO $ do
@@ -160,7 +170,7 @@ symbol_new name = unsafePerformIO $ do
 
 -- |Differentiate an expression with respect to a symbol
 diff :: BasicSym -> BasicSym -> BasicSym
-diff expr symbol = (basic_binaryop basic_diff_ffi) expr symbol
+diff expr symbol = (lift_basicsym_binaryop basic_diff_ffi) expr symbol
 
 instance Show BasicSym where
     show = basic_str
@@ -171,16 +181,16 @@ instance Eq BasicSym where
                 return $ i == 1
 
 instance Num BasicSym where
-    (+) = basic_binaryop basic_add_ffi
-    (-) = basic_binaryop basic_sub_ffi
-    (*) = basic_binaryop basic_mul_ffi
-    negate = basic_unaryop basic_neg_ffi
-    abs = basic_unaryop basic_abs_ffi
+    (+) = lift_basicsym_binaryop basic_add_ffi
+    (-) = lift_basicsym_binaryop basic_sub_ffi
+    (*) = lift_basicsym_binaryop basic_mul_ffi
+    negate = lift_basicsym_unaryop basic_neg_ffi
+    abs = lift_basicsym_unaryop basic_abs_ffi
     signum = undefined
     fromInteger = basic_from_integer
 
 instance Fractional BasicSym where
-    (/) = basic_binaryop basic_div_ffi
+    (/) = lift_basicsym_binaryop basic_div_ffi
     fromRational (num :% denom) = basic_rational_from_integer num denom
     recip r = one / r
 
@@ -191,18 +201,18 @@ instance Floating BasicSym where
     sqrt x = x  ** 1/2
     (**) = basic_pow
     logBase = undefined
-    sin = basic_unaryop basic_sin_ffi
-    cos = basic_unaryop basic_cos_ffi
-    tan = basic_unaryop basic_tan_ffi
-    asin = basic_unaryop basic_asin_ffi
-    acos = basic_unaryop basic_acos_ffi
-    atan = basic_unaryop basic_atan_ffi
-    sinh = basic_unaryop basic_sinh_ffi
-    cosh = basic_unaryop basic_cosh_ffi
-    tanh = basic_unaryop basic_tanh_ffi
-    asinh = basic_unaryop basic_asinh_ffi
-    acosh = basic_unaryop basic_acosh_ffi
-    atanh = basic_unaryop basic_atanh_ffi
+    sin = lift_basicsym_unaryop basic_sin_ffi
+    cos = lift_basicsym_unaryop basic_cos_ffi
+    tan = lift_basicsym_unaryop basic_tan_ffi
+    asin = lift_basicsym_unaryop basic_asin_ffi
+    acos = lift_basicsym_unaryop basic_acos_ffi
+    atan = lift_basicsym_unaryop basic_atan_ffi
+    sinh = lift_basicsym_unaryop basic_sinh_ffi
+    cosh = lift_basicsym_unaryop basic_cosh_ffi
+    tanh = lift_basicsym_unaryop basic_tanh_ffi
+    asinh = lift_basicsym_unaryop basic_asinh_ffi
+    acosh = lift_basicsym_unaryop basic_acosh_ffi
+    atanh = lift_basicsym_unaryop basic_atanh_ffi
 
 foreign import ccall "symengine/cwrapper.h ascii_art_str" ascii_art_str_ffi :: IO CString
 foreign import ccall "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: IO (Ptr CBasicSym)

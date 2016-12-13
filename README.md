@@ -114,3 +114,5 @@ when I pass it through something like `densematrix_diag`
 yield weird as hell errors?
 
 * take proper care of ref. transparency. eg: `densematrix_set`
+
+* Maybe allow GHC to tell about "typo errors" when looking for modules

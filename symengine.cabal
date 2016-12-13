@@ -17,10 +17,12 @@ library
   hs-source-dirs:      src
   exposed-modules:     Symengine,
                        Symengine.DenseMatrix,
-                       Symengine.BasicSym
+                       Symengine.BasicSym,
+                       Symengine.NumberTheory
 
   other-modules:       Symengine.Internal,
                        Symengine.VecBasic
+
   build-depends:       base >= 4.5.0 && <= 5,
                        singletons,
                        vector-sized,
