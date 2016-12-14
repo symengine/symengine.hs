@@ -1,4 +1,4 @@
-  {-# LANGUAGE RecordWildCards #-}
+ {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE DataKinds #-}
