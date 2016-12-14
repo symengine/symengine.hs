@@ -139,9 +139,10 @@ lift_basicsym_binaryop f a b = unsafePerformIO $ do
 
 lift_basicsym_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym
 lift_basicsym_unaryop f a = unsafePerformIO $ do
-    s <- basicsym_new
-    with2 s a f
-    return s
+    s <- basic_new_heap_ffi
+    with a (\a -> f s a)
+    finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi s
+    return (BasicSym finalized_ptr)
 
 
 basic_pow :: BasicSym -> BasicSym -> BasicSym
@@ -189,6 +190,7 @@ instance Num BasicSym where
     negate = lift_basicsym_unaryop basic_neg_ffi
     abs = lift_basicsym_unaryop basic_abs_ffi
     signum = undefined
+    -- works only for long [-2^32, 2^32 - 1]
     fromInteger = basic_from_integer
 
 instance Fractional BasicSym where

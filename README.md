@@ -31,7 +31,7 @@ Since these are *hard* dependencies for SymEngine-hs to build.
 To quickly build and check everything is working, run
 
 ```
-stack build && stack test
+stack build && stack test --test-arguments "--quickcheck-tests 2000" --verbose
 ```
 
 All of the test cases should pass with SymEngine
@@ -82,10 +82,13 @@ link to them.
 
 to test changes, use
 ```
-stack test --force-dirty
+stack test --force-dirty  --test-arguments "--quickcheck-tests 2000" --verbose
 ```
 
-the `--force-dirty` ensures that the library and the test builds are both
+* change `--quickcheck-tests" to some number (preferably > 100), since it generates those many instances to
+test on
+
+* the `--force-dirty` ensures that the library and the test builds are both
 rebuilt.
 
 
