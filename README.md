@@ -116,3 +116,5 @@ yield weird as hell errors?
 * take proper care of ref. transparency. eg: `densematrix_set`
 
 * Maybe allow GHC to tell about "typo errors" when looking for modules
+
+* `merijn	You'll want newPinnedByteArray# :: Int# -> State# s -> (#State# s, MutableByteArray# s#)`

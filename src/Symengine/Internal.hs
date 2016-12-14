@@ -1,6 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FunctionalDependencies #-}
+
+-- data declarations that are empty
+{-# LANGUAGE EmptyDataDecls #-}
+
 module Symengine.Internal
   (
     cIntToEnum,
@@ -65,9 +69,9 @@ with4:: Wrapped o1 i1 => Wrapped o2 i2 => Wrapped o3 i3 => Wrapped o4 i4 => o1 -
 with4 o1 o2 o3 o4 f = with o1 (\p1 -> with3 o2 o3 o4 (\p2 p3 p4 -> f p1 p2 p3 p4))
 
 -- BasicSym
-data CBasicSym = CBasicSym
+data CBasicSym
 
 -- VecBasic
-data CVecBasic = CVecBasic
+data CVecBasic
 
 -- CDenseMatrix

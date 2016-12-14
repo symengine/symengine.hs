@@ -40,7 +40,11 @@ import qualified Data.Vector.Sized as V
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [basicTests, vectorTests, denseMatrixTests]
+tests = testGroup "Tests" [basicTests, 
+                           vectorTests,
+                           denseMatrixImperative,
+                           symbolIntRing,
+                           denseMatrixPlusGroup]
 
 
 -- These are used to check invariants that can be tested by creating
@@ -51,15 +55,11 @@ tests = testGroup "Tests" [basicTests, vectorTests, denseMatrixTests]
 
 instance Arbitrary(BasicSym) where
   arbitrary = do
-    intval <- arbitrary :: Gen Int
-    strval <- arbitrary :: Gen [Char]
-    choice <- arbitrary
+    intval <- QC.choose (1, 5000) :: Gen Int
+    return (fromIntegral intval)
 
-    if choice
-      then return (fromIntegral intval)
-      else return (symbol_new strval)
-
-instance forall r c. (KnownNat r, KnownNat c, KnownNat (r * c)) => Arbitrary(DenseMatrix r c) where
+instance forall r c. (KnownNat r, KnownNat c, KnownNat (r * c)) => 
+  Arbitrary(DenseMatrix r c) where
   arbitrary = do
     let (rows, cols) = (natVal (Proxy @ r), natVal (Proxy @ c))
     syms <- V.replicateM arbitrary
@@ -121,15 +121,26 @@ vectorTests = testGroup "Vector"
         vecbasic_get v 101 @?= Left RuntimeError
     ]
 
+-- tests for symbol(ints)
+symbolIntRing = let
+  plus_commutativity :: BasicSym -> BasicSym -> Bool
+  plus_commutativity b1 b2 = b1 + b2 == b2 + b1
+
+  plus_associativity :: BasicSym -> BasicSym -> BasicSym -> Bool
+  plus_associativity b1 b2 b3 = (b1 + b2) + b3 == b1 + (b2 + b3)
+  in
+    testGroup "Symbols of Ints - Ring" [
+      QC.testProperty "(+) commutativity" plus_commutativity,
+      QC.testProperty "(+) associativity" plus_associativity
+    ]
 
 -- tests for dense matrices
-denseMatrixTests = testGroup "Dense Matrix"
+denseMatrixImperative = testGroup "Dense Matrix - Create, Get/Set"
   [ HU.testCase "Create matrix, test getters" $ 
     do
       let syms = V.generate (\pos -> fromIntegral (pos + 1))
       let mat = densematrix_new_vec syms :: DenseMatrix 2 2
 
-      putStrLn ("matix in test getters:\n" ++ (show mat))
       densematrix_get mat 0 0  @?= 1
       densematrix_get mat 0 1  @?= 2
       densematrix_get mat 1 0  @?= 3
@@ -141,6 +152,23 @@ denseMatrixTests = testGroup "Dense Matrix"
 
           densematrix_get (densematrix_set mat 0 0 10) 0 0 @?= 10
           densematrix_get (densematrix_set mat 0 1 11) 0 1 @?= 11
+  ]
+
+denseMatrixPlusGroup = 
+  let
+    commutativity :: DenseMatrix 10 10 -> DenseMatrix 10 10 -> Bool
+    commutativity d1 d2 = densematrix_add d1 d2 == densematrix_add d2 d1
+
+    associativity :: DenseMatrix 10 10 -> DenseMatrix 10 10 -> 
+                      DenseMatrix 10 10 -> Bool
+    associativity d1 d2 d3 =
+       densematrix_add (densematrix_add d1 d2) d3 == 
+      densematrix_add d1 (densematrix_add d2 d3)
+  in
+    testGroup "DenseMatrix - (+) is commutative group"
+  [   QC.testProperty "commutativity" commutativity,
+      QC.testProperty "associativity" associativity
+  
   ]
 {-
    , HU.testCase "test get_size for matrix" $
@@ -161,10 +189,6 @@ denseMatrixTests = testGroup "Dense Matrix"
                                          0, 0, 0, 3,
                                          0, 0, 0, 0]
      diag @=? correct
-  , QC.testProperty "Dense Matrix (+) commutativity"
-        (\a b -> densematrix_add a b == densematrix_add b a)
-  , QC.testProperty "Dense Matrix (+) asociativity"
-        (\ a b c -> densematrix_add a (densematrix_add b c) == densematrix_add (densematrix_add a b) c)
   , HU.testCase "Dense Matrix * scalar" $ do
       False @=? True
   , HU.testCase "Dense Matrix * Matrix" $ do

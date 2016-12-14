@@ -110,9 +110,10 @@ basic_int_signed i = unsafePerformIO $ do
 
 basic_from_integer :: Integer -> BasicSym
 basic_from_integer i = unsafePerformIO $ do
-    iptr <- basicsym_new
-    with iptr (\iptr -> integer_set_si_ffi iptr (fromInteger i))
-    return iptr
+    iptr <- basic_new_heap_ffi
+    integer_set_si_ffi iptr (fromInteger i)
+    finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi iptr
+    return $ (BasicSym finalized_ptr)
 
 -- |The `ascii_art_str` function prints SymEngine in ASCII art.
 -- this is useful as a sanity check
@@ -131,9 +132,10 @@ basicsym_new = do
 
 lift_basicsym_binaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym -> BasicSym
 lift_basicsym_binaryop f a b = unsafePerformIO $ do
-    s <- basicsym_new
-    with3 s a b f
-    return s
+    s <- basic_new_heap_ffi
+    with2 a b (\a b -> f s a b)
+    finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi s
+    return (BasicSym finalized_ptr)
 
 lift_basicsym_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym
 lift_basicsym_unaryop f a = unsafePerformIO $ do
@@ -215,8 +217,8 @@ instance Floating BasicSym where
     atanh = lift_basicsym_unaryop basic_atanh_ffi
 
 foreign import ccall "symengine/cwrapper.h ascii_art_str" ascii_art_str_ffi :: IO CString
-foreign import ccall "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: IO (Ptr CBasicSym)
-foreign import ccall "symengine/cwrapper.h &basic_free_heap" ptr_basic_free_heap_ffi :: FunPtr(Ptr CBasicSym -> IO ())
+foreign import ccall unsafe "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: IO (Ptr CBasicSym)
+foreign import ccall unsafe "symengine/cwrapper.h &basic_free_heap" ptr_basic_free_heap_ffi :: FunPtr(Ptr CBasicSym -> IO ())
 
 -- constants
 foreign import ccall "symengine/cwrapper.h basic_const_zero" basic_const_zero_ffi :: Ptr CBasicSym -> IO ()
