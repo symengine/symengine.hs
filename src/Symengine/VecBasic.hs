@@ -95,9 +95,10 @@ vecbasic_new = do
 
 vector_to_vecbasic :: forall n. KnownNat n => V.Vector n BasicSym -> IO VecBasic
 vector_to_vecbasic syms = do
-  vec <- vecbasic_new
-  forM_ syms (\s -> vecbasic_push_back vec s)
-  return vec
+  ptr <- vecbasic_new_ffi
+  forM_ syms (\sym -> with sym (\s -> vecbasic_push_back_ffi ptr s))
+  finalized <- newForeignPtr vecbasic_free_ffi ptr
+  return $ VecBasic finalized
 
 vecbasic_size :: VecBasic -> Int
 vecbasic_size vec = unsafePerformIO $

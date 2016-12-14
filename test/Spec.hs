@@ -24,11 +24,13 @@ import Test.Tasty.HUnit as HU
 import Data.List
 import Data.Ord
 import Data.Monoid
+import Data.Ratio
 
 import Symengine as Sym
 import Symengine.DenseMatrix
 import Symengine.VecBasic
 import Symengine.BasicSym
+import Foreign.C.Types
 import Prelude hiding (pi)
 
 
@@ -55,7 +57,9 @@ tests = testGroup "Tests" [basicTests,
 
 instance Arbitrary(BasicSym) where
   arbitrary = do
-    intval <- QC.choose (1, 5000) :: Gen Int
+    --intval <- QC.choose (1, 5000) :: Gen (Ratio Integer)
+    let pow2 = 32
+    intval <-  choose (-2^pow2, 2 ^ pow2 - 1) :: Gen Int
     return (fromIntegral intval)
 
 instance forall r c. (KnownNat r, KnownNat c, KnownNat (r * c)) => 
