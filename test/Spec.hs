@@ -58,7 +58,7 @@ tests = testGroup "Tests" [basicTests,
 instance Arbitrary(BasicSym) where
   arbitrary = do
     --intval <- QC.choose (1, 5000) :: Gen (Ratio Integer)
-    let pow2 = 32
+    let pow2 = 5
     intval <-  choose (-2^pow2, 2 ^ pow2 - 1) :: Gen Int
     return (fromIntegral intval)
 
@@ -130,12 +130,32 @@ symbolIntRing = let
   plus_commutativity :: BasicSym -> BasicSym -> Bool
   plus_commutativity b1 b2 = b1 + b2 == b2 + b1
 
-  plus_associativity :: BasicSym -> BasicSym -> BasicSym -> Bool
-  plus_associativity b1 b2 b3 = (b1 + b2) + b3 == b1 + (b2 + b3)
+  plus_assoc :: BasicSym -> BasicSym -> BasicSym -> Bool
+  plus_assoc b1 b2 b3 = (b1 + b2) + b3 == b1 + (b2 + b3)
+
+  plus_identity :: BasicSym -> Bool
+  plus_identity b = (b + 0) == (0 + b) && (b + 0) == b
+
+  plus_inverse :: BasicSym -> Bool
+  plus_inverse b = (b + (-b)) == 0 && ((-b) + b) == 0
+
+  mult_identity :: BasicSym -> Bool
+  mult_identity b = (b * 1) == (1 * b) && (b * 1) == b
+
+  mult_assoc :: BasicSym -> BasicSym -> BasicSym -> Bool
+  mult_assoc a b c = (a * b) * c == a * (b * c)
+
+  mult_inverse :: BasicSym -> Bool
+  mult_inverse b = b * (1.0 / b) == 1 && (1.0 / b) * b == 1
   in
-    testGroup "Symbols of Ints - Ring" [
+    testGroup "Symbols of numbers - Ring" [
+      QC.testProperty "(+) identity" plus_identity,
+      QC.testProperty "(+) associativity" plus_assoc,
+      QC.testProperty "(+) inverse" plus_inverse,
       QC.testProperty "(+) commutativity" plus_commutativity,
-      QC.testProperty "(+) associativity" plus_associativity
+      QC.testProperty "(*) identity" mult_identity,
+      QC.testProperty "(*) associativity" mult_assoc,
+      QC.testProperty "(*) inverse" mult_inverse
     ]
 
 -- tests for dense matrices
