@@ -124,10 +124,13 @@ basicsym_new = do
 
     return $ BasicSym finalized_ptr
 
-lift_basicsym_binaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym -> BasicSym
+-- NOTE: throws exception
+lift_basicsym_binaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt) -> 
+    BasicSym -> BasicSym -> BasicSym
 lift_basicsym_binaryop f a b = unsafePerformIO $ do
     s <- basicsym_new
-    with3 s a b f
+    exception_id <- with3 s a b f
+    forceException (liftException exception_id s)
     return s
 
 lift_basicsym_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym
@@ -176,9 +179,9 @@ instance Eq BasicSym where
                 return $ i == 1
 
 instance Num BasicSym where
-    (+) = lift_basicsym_binaryop basic_add_ffi
-    (-) = lift_basicsym_binaryop basic_sub_ffi
-    (*) = lift_basicsym_binaryop basic_mul_ffi
+    (+) = lift_basicsym_binaryop $ basic_add_ffi
+    (-) = lift_basicsym_binaryop $ basic_sub_ffi
+    (*) = lift_basicsym_binaryop $ basic_mul_ffi
     negate = lift_basicsym_unaryop basic_neg_ffi
     abs = lift_basicsym_unaryop basic_abs_ffi
     signum = undefined
@@ -186,7 +189,7 @@ instance Num BasicSym where
     fromInteger = basic_from_integer
 
 instance Fractional BasicSym where
-    (/) = lift_basicsym_binaryop basic_div_ffi
+    (/) = lift_basicsym_binaryop $ basic_div_ffi
     fromRational (num :% denom) = basic_rational_from_integer num denom
     recip r = one / r
 

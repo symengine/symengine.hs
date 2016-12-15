@@ -16,7 +16,9 @@ module Symengine.Internal
     with4,
     CBasicSym,
     CVecBasic,
-    SymengineException(NoException, RuntimeError, DivByZero, NotImplemented, DomainError, ParseError)
+    SymengineException(NoException, RuntimeError, DivByZero, NotImplemented, DomainError, ParseError),
+    liftException,
+    forceException
   ) where
 
 import Prelude
@@ -32,14 +34,30 @@ import Control.Monad -- for foldM
 import System.IO.Unsafe
 import Control.Monad
 import GHC.Real
+import Control.Exception
+import Data.Typeable
 
 data SymengineException = NoException |
                            RuntimeError |
                            DivByZero |
                            NotImplemented |
                            DomainError |
-                           ParseError deriving (Show, Enum, Eq)
+                           ParseError deriving (Show, Enum, Eq, Typeable)
 
+instance Exception SymengineException
+
+liftException :: CInt -> a -> Either SymengineException a
+liftException exceptid a = let
+  exception = cIntToEnum exceptid
+  in
+    if exception == NoException
+    then Right a
+    else Left exception
+
+forceException :: Either SymengineException a -> IO ()
+forceException eithera = case eithera of
+  Left error -> throwIO error
+  Right a -> return ()
 
 cIntToEnum :: Enum a => CInt -> a
 cIntToEnum = toEnum . fromIntegral
@@ -70,8 +88,6 @@ with4 o1 o2 o3 o4 f = with o1 (\p1 -> with3 o2 o3 o4 (\p2 p3 p4 -> f p1 p2 p3 p4
 
 -- BasicSym
 data CBasicSym
-
-
 
 -- VecBasic
 data CVecBasic
