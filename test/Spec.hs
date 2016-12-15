@@ -42,10 +42,11 @@ import qualified Data.Vector.Sized as V
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [basicTests, 
+tests = testGroup "Tests" [genBasic,
+                           basicTests, 
+                           symbolIntRing,
                            vectorTests,
                            denseMatrixImperative,
-                           symbolIntRing,
                            denseMatrixPlusGroup]
 
 
@@ -69,6 +70,9 @@ instance forall r c. (KnownNat r, KnownNat c, KnownNat (r * c)) =>
     syms <- V.replicateM arbitrary
 
     return (densematrix_new_vec syms)
+
+genBasic = testGroup "create and destroy BasicSym"
+      [QC.testProperty "create and die immediately " ((const True) :: BasicSym -> Bool) ]
 
 basicTests = testGroup "Basic tests"
   [ HU.testCase "ascii art" $

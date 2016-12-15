@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Symengine,
                        Symengine.DenseMatrix,
-                       Symengine.BasicSym,
+                       Symengine.BasicSym
                        Symengine.NumberTheory
 
   other-modules:       Symengine.Internal,

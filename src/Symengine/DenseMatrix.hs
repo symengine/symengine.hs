@@ -251,8 +251,8 @@ foreign import ccall "symengine/cwrapper.h dense_matrix_set" cdensematrix_set_ff
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_str" cdensematrix_str_ffi :: Ptr CDenseMatrix -> IO CString
 
-foreign import ccall "symengine/cwrapper.h dense_matrix_get_basic" cdensematrix_get_basic_ffi :: Ptr (CBasicSym)  -> Ptr CDenseMatrix -> CUInt -> CUInt -> IO (Ptr CDenseMatrix)
-foreign import ccall "symengine/cwrapper.h dense_matrix_set_basic" cdensematrix_set_basic_ffi :: Ptr CDenseMatrix -> CUInt -> CUInt -> Ptr (CBasicSym)  -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_get_basic" cdensematrix_get_basic_ffi :: Ptr (CBasicStruct)  -> Ptr CDenseMatrix -> CUInt -> CUInt -> IO (Ptr CDenseMatrix)
+foreign import ccall "symengine/cwrapper.h dense_matrix_set_basic" cdensematrix_set_basic_ffi :: Ptr CDenseMatrix -> CUInt -> CUInt -> Ptr (CBasicStruct)  -> IO ()
 
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_rows" cdensematrix_rows_ffi :: Ptr CDenseMatrix -> IO CULong
@@ -260,7 +260,7 @@ foreign import ccall "symengine/cwrapper.h dense_matrix_cols" cdensematrix_cols_
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_add_matrix" cdensematrix_add_matrix :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
 foreign import ccall "symengine/cwrapper.h dense_matrix_mul_matrix" cdensematrix_mul_matrix :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
-foreign import ccall "symengine/cwrapper.h dense_matrix_mul_scalar" cdensematrix_mul_scalar :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CBasicSym -> IO ()
+foreign import ccall "symengine/cwrapper.h dense_matrix_mul_scalar" cdensematrix_mul_scalar :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CBasicStruct -> IO ()
 
 foreign import ccall "symengine/cwrapper.h dense_matrix_LU" cdensematrix_lu :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()
 foreign import ccall "symengine/cwrapper.h dense_matrix_LDL" cdensematrix_ldl :: Ptr CDenseMatrix -> Ptr CDenseMatrix -> Ptr CDenseMatrix -> IO ()

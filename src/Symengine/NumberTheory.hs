@@ -146,78 +146,78 @@ factorial n = unsafePerformIO $ do
 -- gcd, lcm
 
 foreign import ccall "symengine/cwrapper.h ntheory_gcd" ntheory_gcd_ffi :: 
-  Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  Ptr CBasicStruct -> Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 foreign import ccall "symengine/cwrapper.h ntheory_lcm" ntheory_lcm_ffi :: 
-  Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  Ptr CBasicStruct -> Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 foreign import ccall "symengine/cwrapper.h ntheory_gcd_ext" ntheory_gcd_ext_ffi 
-  :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> 
-      Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  :: Ptr CBasicStruct -> Ptr CBasicStruct -> Ptr CBasicStruct -> 
+      Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 -- prime
 
 foreign import ccall "symengine/cwrapper.h ntheory_nextprime"
-  ntheory_nextprime_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  ntheory_nextprime_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 -- modulus
 
 foreign import ccall "symengine/cwrapper.h ntheory_mod"
-  ntheory_mod_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  ntheory_mod_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 
 foreign import ccall "symengine/cwrapper.h ntheory_quotient"
-  ntheory_quotient_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  ntheory_quotient_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 foreign import ccall "symengine/cwrapper.h ntheory_quotient_mod"
-  ntheory_quotient_mod_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> 
-                          Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  ntheory_quotient_mod_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct -> 
+                          Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 
 -- _f versions (round towards -inf)
 foreign import ccall "symengine/cwrapper.h ntheory_mod_f"
-  ntheory_mod_f_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  ntheory_mod_f_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 
 foreign import ccall "symengine/cwrapper.h ntheory_quotient_f"
-  ntheory_quotient_f_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  ntheory_quotient_f_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 foreign import ccall "symengine/cwrapper.h ntheory_quotient_mod_f"
-  ntheory_quotient_mod_f_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> 
-                          Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  ntheory_quotient_mod_f_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct -> 
+                          Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 -- mod inverse
 foreign import ccall "symengine/cwrapper.h ntheory_mod_inverse"
-  ntheory_mod_inverse_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO ()
+  ntheory_mod_inverse_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct -> Ptr CBasicStruct -> IO ()
 
 
 -- fibonacci
 foreign import ccall "symengine/cwrapper.h ntheory_fibonacci"
-  ntheory_fibonacci_ffi :: Ptr CBasicSym -> 
+  ntheory_fibonacci_ffi :: Ptr CBasicStruct -> 
     CULong -> IO ()
 
 
 foreign import ccall "symengine/cwrapper.h ntheory_fibonacci2"
-  ntheory_fibonacci2_ffi :: Ptr CBasicSym -> Ptr CBasicSym ->  
+  ntheory_fibonacci2_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct ->  
     CULong -> IO ()
 
 -- lucas
 foreign import ccall "symengine/cwrapper.h ntheory_lucas"
-  ntheory_lucas_ffi :: Ptr CBasicSym ->
+  ntheory_lucas_ffi :: Ptr CBasicStruct ->
     CULong -> IO ()
 
 
 foreign import ccall "symengine/cwrapper.h ntheory_lucas2"
-  ntheory_lucas2_ffi :: Ptr CBasicSym -> Ptr CBasicSym ->  
+  ntheory_lucas2_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct ->  
      CULong -> IO ()
 
 
 -- binomial
 foreign import ccall "symengine/cwrapper.h ntheory_binomial"
-  ntheory_binomial_ffi :: Ptr CBasicSym -> Ptr CBasicSym ->  
+  ntheory_binomial_ffi :: Ptr CBasicStruct -> Ptr CBasicStruct ->  
     CULong -> IO ()
 
 -- factorial
 foreign import ccall "symengine/cwrapper.h ntheory_factorial"
-  ntheory_factorial_ffi :: Ptr CBasicSym -> 
+  ntheory_factorial_ffi :: Ptr CBasicStruct -> 
     CULong -> IO ()
