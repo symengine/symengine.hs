@@ -14,7 +14,7 @@ module Symengine.Internal
     with2,
     with3,
     with4,
-    CBasicStruct(..),
+    CBasicSym,
     CVecBasic,
     SymengineException(NoException, RuntimeError, DivByZero, NotImplemented, DomainError, ParseError)
   ) where
@@ -69,17 +69,8 @@ with4:: Wrapped o1 i1 => Wrapped o2 i2 => Wrapped o3 i3 => Wrapped o4 i4 => o1 -
 with4 o1 o2 o3 o4 f = with o1 (\p1 -> with3 o2 o3 o4 (\p2 p3 p4 -> f p1 p2 p3 p4))
 
 -- BasicSym
+data CBasicSym
 
-data CBasicStruct = CBasicStruct {
-      data_ptr :: Ptr ()
-}
-
-
-instance Storable CBasicStruct where
-    alignment _ = 8
-    sizeOf _ = sizeOf nullPtr
-    peek basic_ptr = CBasicStruct <$> peekByteOff basic_ptr 0
-    poke basic_ptr CBasicStruct{..} = pokeByteOff basic_ptr 0 data_ptr
 
 
 -- VecBasic
