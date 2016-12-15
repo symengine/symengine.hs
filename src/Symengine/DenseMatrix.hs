@@ -35,6 +35,7 @@ module Symengine.DenseMatrix
    densematrix_mul_scalar,
    det,
    inv,
+   transpose,
 
    --decomposition
    L(L), D(D), U(U),
