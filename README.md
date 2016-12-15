@@ -26,6 +26,12 @@ as well as the libraries
 
 Since these are *hard* dependencies for SymEngine-hs to build.
 
+Compile `SymEngine` with the `CMake` flags
+
+```bash
+cmake -DWITH_SYMENGINE_THREAD_SAFE=yes -DBUILD_SHARED_LIBS:BOOL=ON
+```
+
 # Getting started
 
 To quickly build and check everything is working, run
@@ -121,3 +127,5 @@ yield weird as hell errors?
 * Maybe allow GHC to tell about "typo errors" when looking for modules
 
 * `merijn	You'll want newPinnedByteArray# :: Int# -> State# s -> (#State# s, MutableByteArray# s#)`
+
+* is the API Thread-safe?

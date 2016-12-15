@@ -37,19 +37,10 @@ import GHC.Real
 
 import Symengine.Internal
 
-newtype BasicSym = BasicSym (ForeignPtr CBasicSym)
+data BasicSym = BasicSym !(ForeignPtr CBasicSym)
 instance Wrapped BasicSym CBasicSym where
   with (BasicSym (p)) f = withForeignPtr p f
   
-withBasicSym :: BasicSym -> (Ptr CBasicSym -> IO a) -> IO a
-withBasicSym (BasicSym ptr) = withForeignPtr ptr
-
-withBasicSym2 :: BasicSym -> BasicSym -> (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> IO a
-withBasicSym2 p1 p2 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> f p1 p2))
-
-withBasicSym3 :: BasicSym -> BasicSym -> BasicSym -> (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> IO a
-withBasicSym3 p1 p2 p3 f = withBasicSym p1 (\p1 -> withBasicSym p2 (\p2 -> withBasicSym p3 (\p3 -> f p1 p2 p3)))
-
 -- | constructor for 0
 zero :: BasicSym
 zero = basicsym_construct basic_const_zero_ffi
@@ -110,10 +101,11 @@ basic_int_signed i = unsafePerformIO $ do
 
 basic_from_integer :: Integer -> BasicSym
 basic_from_integer i = unsafePerformIO $ do
-    iptr <- basic_new_heap_ffi
-    integer_set_si_ffi iptr (fromInteger i)
-    finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi iptr
-    return $ (BasicSym finalized_ptr)
+    s <- basic_new_heap_ffi 
+    integer_set_si_ffi s (fromInteger i)
+    -- finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi s
+    finalized_ptr <- newForeignPtr_ s
+    return $ BasicSym finalized_ptr
 
 -- |The `ascii_art_str` function prints SymEngine in ASCII art.
 -- this is useful as a sanity check
@@ -134,13 +126,14 @@ lift_basicsym_binaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO
 lift_basicsym_binaryop f a b = unsafePerformIO $ do
     s <- basic_new_heap_ffi
     with2 a b (\a b -> f s a b)
-    finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi s
+    --finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi s
+    finalized_ptr <- newForeignPtr_ s
     return (BasicSym finalized_ptr)
 
 lift_basicsym_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym
-lift_basicsym_unaryop f a = unsafePerformIO $ do
+lift_basicsym_unaryop f (BasicSym(aptr)) = unsafePerformIO $ do
     s <- basic_new_heap_ffi
-    with a (\a -> f s a)
+    withForeignPtr aptr (\a -> f s a)
     finalized_ptr <- newForeignPtr ptr_basic_free_heap_ffi s
     return (BasicSym finalized_ptr)
 
@@ -219,8 +212,8 @@ instance Floating BasicSym where
     atanh = lift_basicsym_unaryop basic_atanh_ffi
 
 foreign import ccall "symengine/cwrapper.h ascii_art_str" ascii_art_str_ffi :: IO CString
-foreign import ccall unsafe "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: IO (Ptr CBasicSym)
-foreign import ccall unsafe "symengine/cwrapper.h &basic_free_heap" ptr_basic_free_heap_ffi :: FunPtr(Ptr CBasicSym -> IO ())
+foreign import ccall "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: IO (Ptr CBasicSym)
+foreign import ccall "symengine/cwrapper.h &basic_free_heap" ptr_basic_free_heap_ffi :: FunPtr(Ptr CBasicSym -> IO ())
 
 -- constants
 foreign import ccall "symengine/cwrapper.h basic_const_zero" basic_const_zero_ffi :: Ptr CBasicSym -> IO ()
@@ -236,7 +229,7 @@ foreign import ccall "symengine/cwrapper.h basic_eq" basic_eq_ffi :: Ptr CBasicS
 foreign import ccall "symengine/cwrapper.h symbol_set" symbol_set_ffi :: Ptr CBasicSym -> CString -> IO CInt
 foreign import ccall "symengine/cwrapper.h basic_diff" basic_diff_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 
-foreign import ccall "symengine/cwrapper.h integer_set_si" integer_set_si_ffi :: Ptr CBasicSym -> CLong -> IO CInt
+foreign import ccall "symengine/cwrapper.h integer_set_si" integer_set_si_ffi :: Ptr CBasicSym -> CLong -> IO ()
 
 foreign import ccall "symengine/cwrapper.h rational_set" rational_set_ffi :: Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO CInt
 foreign import ccall "symengine/cwrapper.h rational_set_si" rational_set_si_ffi :: Ptr CBasicSym -> CLong -> CLong -> IO ()

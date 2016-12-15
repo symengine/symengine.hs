@@ -59,7 +59,7 @@ instance Arbitrary(BasicSym) where
   arbitrary = do
     --intval <- QC.choose (1, 5000) :: Gen (Ratio Integer)
     let pow2 = 5
-    intval <-  choose (-2^pow2, 2 ^ pow2 - 1) :: Gen Int
+    intval <-  choose (-(2^pow2), 2 ^ pow2 - 1) :: Gen Int
     return (fromIntegral intval)
 
 instance forall r c. (KnownNat r, KnownNat c, KnownNat (r * c)) => 
@@ -134,7 +134,7 @@ symbolIntRing = let
   plus_assoc b1 b2 b3 = (b1 + b2) + b3 == b1 + (b2 + b3)
 
   plus_identity :: BasicSym -> Bool
-  plus_identity b = (b + 0) == (0 + b) && (b + 0) == b
+  plus_identity b = (b + 0) == b && (0 + b) == b
 
   plus_inverse :: BasicSym -> Bool
   plus_inverse b = (b + (-b)) == 0 && ((-b) + b) == 0
