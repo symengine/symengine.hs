@@ -79,7 +79,7 @@ GHCi session with Symengine loaded
 clone `Symengine`, build it with the setting
 
 ```
-cmake -DBUILD_SHARED_LIBS:BOOL=ON
+cmake -DWITH_SYMENGINE_THREAD_SAFE=yes -DBUILD_SHARED_LIBS:BOOL=ON
 ```
 
 this makes sure that dynamically linked libraries are being built, so we can

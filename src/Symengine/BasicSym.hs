@@ -15,6 +15,7 @@ module Symengine.BasicSym(
      complex,
      symbol_new,
      diff,
+     expand,
      -- HACK: this should be internal :(
      basicsym_new,
      BasicSym,
@@ -129,14 +130,14 @@ lift_basicsym_binaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> Ptr CBasicSym -> IO
     BasicSym -> BasicSym -> BasicSym
 lift_basicsym_binaryop f a b = unsafePerformIO $ do
     s <- basicsym_new
-    exception_id <- with3 s a b f
-    forceException (liftException exception_id s)
+    with3 s a b f >>= throwOnSymIntException
+
     return s
 
-lift_basicsym_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO a) -> BasicSym -> BasicSym
+lift_basicsym_unaryop :: (Ptr CBasicSym -> Ptr CBasicSym -> IO CInt) -> BasicSym -> BasicSym
 lift_basicsym_unaryop f a = unsafePerformIO $ do
     s <- basicsym_new 
-    with2 s a f
+    with2 s a f >>= throwOnSymIntException
     return $ s
 
 
@@ -184,7 +185,7 @@ instance Num BasicSym where
     (*) = lift_basicsym_binaryop $ basic_mul_ffi
     negate = lift_basicsym_unaryop basic_neg_ffi
     abs = lift_basicsym_unaryop basic_abs_ffi
-    signum = undefined
+
     -- works only for long [-2^32, 2^32 - 1]
     fromInteger = basic_from_integer
 
@@ -215,7 +216,6 @@ instance Floating BasicSym where
 
 foreign import ccall "symengine/cwrapper.h ascii_art_str" ascii_art_str_ffi :: IO CString
 foreign import ccall "symengine/cwrapper.h basic_new_heap" basic_new_heap_ffi :: IO (Ptr CBasicSym)
-foreign import ccall "symengine/cwrapper.h basic_init_heap" basic_init_heap_ffi :: Ptr CBasicSym -> IO ()
 foreign import ccall "symengine/cwrapper.h &basic_free_heap" ptr_basic_free_heap_ffi :: FunPtr(Ptr CBasicSym -> IO ())
 
 -- constants

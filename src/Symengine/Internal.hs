@@ -17,8 +17,8 @@ module Symengine.Internal
     CBasicSym,
     CVecBasic,
     SymengineException(NoException, RuntimeError, DivByZero, NotImplemented, DomainError, ParseError),
-    liftException,
-    forceException
+    forceException,
+    throwOnSymIntException
   ) where
 
 import Prelude
@@ -46,18 +46,17 @@ data SymengineException = NoException |
 
 instance Exception SymengineException
 
-liftException :: CInt -> a -> Either SymengineException a
-liftException exceptid a = let
-  exception = cIntToEnum exceptid
-  in
-    if exception == NoException
-    then Right a
-    else Left exception
 
-forceException :: Either SymengineException a -> IO ()
-forceException eithera = case eithera of
-  Left error -> throwIO error
-  Right a -> return ()
+-- interpret the CInt as a SymengineException, and
+-- throw if it is actually an error
+throwOnSymIntException :: CInt -> IO ()
+throwOnSymIntException i = forceException . cIntToEnum $ i
+
+forceException :: SymengineException -> IO ()
+forceException exception = 
+  case exception of
+  NoException -> return ()
+  error @ _ -> throwIO error
 
 cIntToEnum :: Enum a => CInt -> a
 cIntToEnum = toEnum . fromIntegral

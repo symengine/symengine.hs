@@ -23,7 +23,6 @@ import Test.Tasty.HUnit as HU
 
 import Data.List
 import Data.Ord
-import Data.Monoid
 import Data.Ratio
 
 import Symengine as Sym
@@ -44,7 +43,7 @@ main = defaultMain tests
 tests :: TestTree
 tests = testGroup "Tests" [genBasic,
                            symbolIntRing,
-                           denseMatrixPlusGroup]
+                           denseMatrixRing]
 
 
 -- These are used to check invariants that can be tested by creating
@@ -53,13 +52,25 @@ tests = testGroup "Tests" [genBasic,
 -- properties :: TestTree
 -- properties = testGroup "Properties" [qcProps]
 
+
+genSafeChar :: Gen Char
+genSafeChar = elements ['a'..'z']
+
+genSafeString :: Gen String
+genSafeString = listOf1 genSafeChar
+
+
 instance Arbitrary(BasicSym) where
   arbitrary = do
     --intval <- QC.choose (1, 5000) :: Gen (Ratio Integer)
-    let pow2 = 5
+    let pow2 = 512
     intval <-  choose (-(2^pow2), 2 ^ pow2 - 1) :: Gen Int
-    return (fromIntegral intval)
+    strval <- genSafeString :: Gen String
+    choice <- arbitrary :: Gen Bool
 
+    if choice
+    then return (fromIntegral intval)
+    else return (symbol_new (take 10 strval))
 instance forall r c. (KnownNat r, KnownNat c, KnownNat (r * c)) => 
   Arbitrary(DenseMatrix r c) where
   arbitrary = do
@@ -148,88 +159,71 @@ symbolIntRing = let
 
   mult_inverse :: BasicSym -> Bool
   mult_inverse b = if b == 0 then True else b * (1.0 / b) == 1 && (1.0 / b) * b == 1
+
+  mult_commutativity :: BasicSym -> BasicSym -> Bool
+  mult_commutativity b1 b2 = b1 * b2 == b2 * b1
+
+ -- symengine (==) is structural equality, not "legit" equality. 
+ -- see: https://github.com/symengine/symengine/issues/207
+  mult_distributivity :: BasicSym -> BasicSym -> BasicSym -> Bool
+  mult_distributivity b1 b2 b3 = expand(b1 * (b2 + b3) - (b1 * b2 + b1 * b3)) == (0 :: BasicSym)
   in
     testGroup "Symbols of numbers - Ring" [
       QC.testProperty "(+) identity" plus_identity,
       QC.testProperty "(+) associativity" plus_assoc,
       QC.testProperty "(+) inverse" plus_inverse,
-     QC.testProperty "(+) commutativity" plus_commutativity,
-     QC.testProperty "(*) identity" mult_identity,
-     QC.testProperty "(*) associativity" mult_assoc,
-     QC.testProperty "(*) inverse" mult_inverse
+      QC.testProperty "(+) commutativity" plus_commutativity,
+      QC.testProperty "(*) identity" mult_identity,
+      QC.testProperty "(*) associativity" mult_assoc,
+      QC.testProperty "(*) inverse" mult_inverse,
+      QC.testProperty "(*) distributivity" mult_distributivity
     ]
 
--- tests for dense matrices
-denseMatrixImperative = testGroup "Dense Matrix - Create, Get/Set"
-  [ HU.testCase "Create matrix, test getters" $ 
-    do
-      let syms = V.generate (\pos -> fromIntegral (pos + 1))
-      let mat = densematrix_new_vec syms :: DenseMatrix 2 2
 
-      densematrix_get mat 0 0  @?= 1
-      densematrix_get mat 0 1  @?= 2
-      densematrix_get mat 1 0  @?= 3
-      densematrix_get mat 1 1  @?= 4
-    , HU.testCase "test set for matrix" $
-        do
-          let syms = V.generate (\pos -> fromIntegral (pos + 1))
-          let mat = densematrix_new_vec syms :: DenseMatrix 2 2
-
-          densematrix_get (densematrix_set mat 0 0 10) 0 0 @?= 10
-          densematrix_get (densematrix_set mat 0 1 11) 0 1 @?= 11
-  ]
-
-denseMatrixPlusGroup = 
+denseMatrixRing = 
   let
-    commutativity :: DenseMatrix 10 10 -> DenseMatrix 10 10 -> Bool
-    commutativity d1 d2 = densematrix_add d1 d2 == densematrix_add d2 d1
+    eye :: DenseMatrix 10 10
+    eye = densematrix_new_eye @ 0 @ 10 @ 10
 
-    associativity :: DenseMatrix 10 10 -> DenseMatrix 10 10 -> 
+    zero :: DenseMatrix 10 10
+    zero = densematrix_new_zeros @ 10 @ 10
+
+    plus_identity :: DenseMatrix 10 10 -> Bool
+    plus_identity d = densematrix_add d zero == d && densematrix_add zero d == d
+
+    plus_invert :: DenseMatrix 10 10 -> Bool
+    plus_invert d = d - d == densematrix_new_zeros
+
+    plus_commutativity :: DenseMatrix 10 10 -> DenseMatrix 10 10 -> Bool
+    plus_commutativity d1 d2 = densematrix_add d1 d2 == densematrix_add d2 d1
+
+    plus_assoc :: DenseMatrix 10 10 -> DenseMatrix 10 10 -> 
                       DenseMatrix 10 10 -> Bool
-    associativity d1 d2 d3 =
+    plus_assoc d1 d2 d3 =
        densematrix_add (densematrix_add d1 d2) d3 == 
       densematrix_add d1 (densematrix_add d2 d3)
-  in
-    testGroup "DenseMatrix - (+) is commutative group"
-  [   QC.testProperty "commutativity" commutativity,
-      QC.testProperty "associativity" associativity
-  
-  ]
-{-
-   , HU.testCase "test get_size for matrix" $
-     do
-       let syms = [1, 2, 3, 4, 5, 6]
-       let mat = densematrix_new_vec 2 3 syms
-       densematrix_size mat @?= (2, 3)
-  , HU.testCase "Identity matrix" $
-    do
-      let eye = densematrix_new_eye 2 2 0
-      let correct = densematrix_new_vec 2 2 [1, 0, 0, 1]
-      eye @?= eye
-  , HU.testCase "diagonal matrix" $
-    do
-     let diag = densematrix_new_diag [1, 2, 3] 1
-     let correct = densematrix_new_vec 4 4 [0, 1, 0, 0,
-                                         0, 0, 2, 0,
-                                         0, 0, 0, 3,
-                                         0, 0, 0, 0]
-     diag @=? correct
-  , HU.testCase "Dense Matrix * scalar" $ do
-      False @=? True
-  , HU.testCase "Dense Matrix * Matrix" $ do
-      False @=? True
 
-  , HU.testCase "Dense Matrix LU" $ do
-      False @=? True 
-  , HU.testCase "Dense Matrix LDL" $ do
-      False @=? True
-  , HU.testCase "Dense Matrix FFLU" $ do
-      False @=? True
-  , HU.testCase "Dense Matrix FFLDU" $ do
-      False @=? True
-  , HU.testCase "Dense Matrix LU Solve" $ do
-      let a = densematrix_new_eye 2 2 0
-      let b = densematrix_new_eye 2 2 0
-      False @=? True
-   ]
--}
+    mult_identity :: DenseMatrix 10 10 -> Bool
+    mult_identity d = d <> eye == d && eye <> d == d
+
+    mult_assoc :: DenseMatrix 2 2 -> DenseMatrix 2 2  -> DenseMatrix 2 2 -> Bool
+    mult_assoc d1 d2 d3 = (((d1 <> d2) <> d3) - (d1 <> (d2 <> d3))) == densematrix_new_zeros
+
+    mult_nonsingular_invertible :: DenseMatrix 10 10 -> Bool
+    mult_nonsingular_invertible d = if expand(det d) /= 0 then d <> (inv d) == eye  else True
+  in
+    testGroup "DenseMatrix - Ring"
+  [   
+     QC.testProperty "(+) identity" plus_identity,
+     QC.testProperty "(+) associativity" plus_assoc,
+     QC.testProperty "(+) commutativity" plus_commutativity,
+
+     QC.testProperty "(*) identity" mult_identity,
+     -- this fails because I need symbol reduction
+     -- QC.testProperty "(*) associativity " mult_assoc
+ 
+     -- no idea why this fails
+     -- QC.testProperty "(*) non-singluar invertible" mult_nonsingular_invertible
+  ]
+
+
