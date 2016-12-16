@@ -46,31 +46,15 @@ matrix:
   #- env: BUILD=cabal GHCVER=7.2.2 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
   #  compiler: ": #GHC 7.2.2"
   #  addons: {apt: {packages: [cabal-install-1.16,ghc-7.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
-  - env: BUILD=cabal GHCVER=7.4.2 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #GHC 7.4.2"
-    addons: {apt: {packages: [libgmp-dev,
-                              libmpfr-dev,
-                              libmpc-dev,
-                              binutils-dev,
-                              g++-4.7,
-                              gcc, cabal-install-1.16,ghc-7.4.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
-  - env: BUILD=cabal GHCVER=7.6.3 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #GHC 7.6.3"
-    addons: {apt: {packages: [libgmp-dev,
-                              libmpfr-dev,
-                              libmpc-dev,
-                              binutils-dev,
-                              g++-4.7,
-                              gcc, cabal-install-1.16,ghc-7.6.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
-  - env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  - env: BUILD=cabal CABALVER=1.24 GHCVER=7.8.4 STACK_YAML=stack-7.8.yaml
     compiler: ": #GHC 7.8.4"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
                               binutils-dev,
                               g++-4.7,
-                              gcc, cabal-install-1.18,ghc-7.8.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
-  - env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22 HAPPYVER=1.19.5 ALEXVER=3.1.7
+                              gcc, cabal-install-1.24,ghc-7.8.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+  - env: BUILD=cabal CABALVER=1.22 GHCVER=7.10.3
     compiler: ": #GHC 7.10.3"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
@@ -78,17 +62,14 @@ matrix:
                               binutils-dev,
                               g++-4.7,
                               gcc, cabal-install-1.22,ghc-7.10.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
-
-  # Build with the newest GHC and cabal-install. This is an accepted failure,
-  # see below.
-  - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #GHC HEAD"
+  - env: BUILD=cabal CABALVER=1.24 GHCVER=8.0.1
+    compiler: ": #GHC 8.0.1"
     addons: {apt: {packages: [libgmp-dev,
                               libmpfr-dev,
                               libmpc-dev,
                               binutils-dev,
                               g++-4.7,
-                              gcc, cabal-install-head,ghc-head,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
+                              gcc, cabal-install-1.24,ghc-8.0.1,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc, ubuntu-toolchain-r-test]}}
 
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
@@ -210,6 +191,8 @@ install:
 
 # Download and unpack the stack executable
 - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$HOME/.local/bin:/opt/alex/$ALEXVER/bin:/opt/happy/$HAPPYVER/bin:$HOME/.cabal/bin:$PATH
+# add cabal install path
+- export PATH=PATH="$HOME/.cabal/bin:$PATH"
 - mkdir -p ~/.local/bin
 - |
   if [ `uname` = "Darwin" ]

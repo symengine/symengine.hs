@@ -26,12 +26,18 @@ as well as the libraries
 
 Since these are *hard* dependencies for SymEngine-hs to build.
 
+Compile `SymEngine` with the `CMake` flags
+
+```bash
+cmake -DWITH_SYMENGINE_THREAD_SAFE=yes -DBUILD_SHARED_LIBS:BOOL=ON
+```
+
 # Getting started
 
 To quickly build and check everything is working, run
 
 ```
-stack build && stack test
+stack build && stack test --test-arguments "--quickcheck-tests 2000" --verbose
 ```
 
 All of the test cases should pass with SymEngine
@@ -68,14 +74,58 @@ GHCi session with Symengine loaded
 -1
 ```
 
-# Things to Do
+# Development
 
-`[TODO: fill this up]`
+clone `Symengine`, build it with the setting
 
-# Contributing
+```
+cmake -DWITH_SYMENGINE_THREAD_SAFE=yes -DBUILD_SHARED_LIBS:BOOL=ON
+```
 
-`[TODO: fill this up]`
+this makes sure that dynamically linked libraries are being built, so we can
+link to them.
+
+
+to test changes, use
+```
+stack test --force-dirty  --test-arguments "--quickcheck-tests 2000" --verbose
+```
+
+* change `--quickcheck-tests" to some number (preferably > 100), since it generates those many instances to
+test on
+
+* the `--force-dirty` ensures that the library and the test builds are both
+rebuilt.
+
 
 # License
 
 All code is released under the [MIT License](https://github.com/symengine/symengine.hs/blob/master/LICENSE).
+
+
+# Things Learnt 
+
+* you can use `toEnum` to convert from `Int` to the `C<Int | Long | ..>` variants
+of C types
+
+* API design - how to best handle exceptions?
+
+# Bugs
+
+* if I create a lazy list of BasicSym, then what happens? it gets forced to evaluate
+when I pass it through something like `densematrix_diag`
+
+
+* `densematrix_new_vec  2 3 []` crashes. We need to check for this in our code
+
+
+* What exactly does 'unsafePerformIO' do? why does `unsafePerformIO` on `basicsym_new`
+yield weird as hell errors?
+
+* take proper care of ref. transparency. eg: `densematrix_set`
+
+* Maybe allow GHC to tell about "typo errors" when looking for modules
+
+* `merijn	You'll want newPinnedByteArray# :: Int# -> State# s -> (#State# s, MutableByteArray# s#)`
+
+* is the API Thread-safe?
