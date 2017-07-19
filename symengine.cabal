@@ -18,6 +18,7 @@ library
   exposed-modules:     Symengine
   build-depends:       base >= 4.5.0 && <= 5
   default-language:    Haskell2010
+  extra-libraries:     symengine stdc++ gmpxx gmp
 
 test-suite symengine-test
   type:                exitcode-stdio-1.0
@@ -30,7 +31,6 @@ test-suite symengine-test
                      , tasty-quickcheck >= 0.8.0 && <= 1.5
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   include-dirs:        /usr/local/include/
-  extra-libraries:     symengine stdc++ gmpxx gmp
   
   other-modules:       Symengine
 
