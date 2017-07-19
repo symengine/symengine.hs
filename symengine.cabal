@@ -1,7 +1,7 @@
 name:                symengine
 version:             0.1.2.0
 synopsis:            SymEngine symbolic mathematics engine for Haskell
-description:         Please see README.md
+description:         SymEngine symbolic mathematics engine for Haskell
 homepage:            http://github.com/symengine/symengine.hs#readme
 license:             MIT
 license-file:        LICENSE
