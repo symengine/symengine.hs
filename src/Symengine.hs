@@ -17,6 +17,15 @@ module Symengine
      complex,
      symbol,
      BasicSym,
+     is_a_Number,
+     is_a_Integer,
+     is_a_Rational,
+     is_a_Symbol,
+     is_a_Complex,
+     is_a_RealDouble,
+     is_a_ComplexDouble,
+     is_a_RealMPFR,
+     is_a_ComplexMPC
     ) where
 
 import Foreign.C.Types
@@ -97,6 +106,42 @@ expand = basic_unaryop basic_expand_ffi
 eulerGamma :: BasicSym
 eulerGamma = basic_obj_constructor basic_const_EulerGamma_ffi
 
+-- | Return 1 if s is a Number, 0 if not.
+is_a_Number :: BasicSym -> Int
+is_a_Number = basic_predicate is_a_Number_ffi
+
+-- | Return 1 if s is an Integer, 0 if not.
+is_a_Integer :: BasicSym -> Int
+is_a_Integer = basic_predicate is_a_Integer_ffi
+
+-- | Return 1 if s is a Rational, 0 if not.
+is_a_Rational :: BasicSym -> Int
+is_a_Rational = basic_predicate is_a_Rational_ffi
+
+-- | Return 1 if s is a Symbol, 0 if not.
+is_a_Symbol :: BasicSym -> Int
+is_a_Symbol = basic_predicate is_a_Symbol_ffi
+
+-- | Return 1 if s is a Complex, 0 if not.
+is_a_Complex :: BasicSym -> Int
+is_a_Complex = basic_predicate is_a_Complex_ffi
+
+-- | Return 1 if c is a RealDouble, 0 if not.
+is_a_RealDouble :: BasicSym -> Int
+is_a_RealDouble = basic_predicate is_a_RealDouble_ffi
+
+-- | Return 1 if c is a ComplexDouble, 0 if not.
+is_a_ComplexDouble :: BasicSym -> Int
+is_a_ComplexDouble = basic_predicate is_a_ComplexDouble_ffi
+
+-- | Return 1 if c is a RealMPFR, 0 if not.
+is_a_RealMPFR :: BasicSym -> Int
+is_a_RealMPFR = basic_predicate is_a_RealMPFR_ffi
+
+-- | Return 1 if c is a ComplexMPC, 0 if not.
+is_a_ComplexMPC :: BasicSym -> Int
+is_a_ComplexMPC = basic_predicate is_a_ComplexMPC_ffi
+
 basic_obj_constructor :: (Ptr BasicStruct -> IO ()) -> BasicSym
 basic_obj_constructor init_fn = unsafePerformIO $ do
     basic_ptr <- create_basic_ptr
@@ -154,6 +199,8 @@ basic_unaryop f a = unsafePerformIO $ do
     withBasicSym2 s a f
     return s 
 
+basic_predicate :: (Ptr BasicStruct -> IO CInt) -> BasicSym -> Int
+basic_predicate f a = unsafePerformIO $ fmap fromIntegral $ withBasicSym a f
 
 basic_pow :: BasicSym -> BasicSym -> BasicSym
 basic_pow = basic_binaryop basic_pow_ffi
@@ -279,3 +326,13 @@ foreign import ccall "symengine/cwrapper.h basic_tanh" basic_tanh_ffi :: Ptr Bas
 foreign import ccall "symengine/cwrapper.h basic_asinh" basic_asinh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_acosh" basic_acosh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
 foreign import ccall "symengine/cwrapper.h basic_atanh" basic_atanh_ffi :: Ptr BasicStruct -> Ptr BasicStruct -> IO ()
+
+foreign import ccall "symengine/cwrapper.h is_a_Number" is_a_Number_ffi :: Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h is_a_Integer" is_a_Integer_ffi :: Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h is_a_Rational" is_a_Rational_ffi :: Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h is_a_Symbol" is_a_Symbol_ffi :: Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h is_a_Complex" is_a_Complex_ffi :: Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h is_a_RealDouble" is_a_RealDouble_ffi :: Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h is_a_ComplexDouble" is_a_ComplexDouble_ffi :: Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h is_a_RealMPFR" is_a_RealMPFR_ffi :: Ptr BasicStruct -> IO CInt
+foreign import ccall "symengine/cwrapper.h is_a_ComplexMPC" is_a_ComplexMPC_ffi :: Ptr BasicStruct -> IO CInt
