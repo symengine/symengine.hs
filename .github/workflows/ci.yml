@@ -41,7 +41,7 @@ jobs:
     - name: Install system dependencies (MacOS)
       if: matrix.os == 'macos-latest'
       run: |
-        brew install cmake ninja-build boost
+        brew install cmake ninja boost
 
     - uses: actions/cache@v3
       name: Cache /opt/symengine
