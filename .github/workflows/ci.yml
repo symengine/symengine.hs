@@ -54,7 +54,7 @@ jobs:
       if: steps.cache-symengine.outputs.cache-hit != 'true'
       run: |
         cd $GITHUB_WORKSPACE
-        git clone --depth=0 https://github.com/symengine/symengine
+        git clone --depth=1 https://github.com/symengine/symengine
         cd symengine
         cmake -B build -G Ninja \
           -DCMAKE_INSTALL_PREFIX=/opt/symengine \
