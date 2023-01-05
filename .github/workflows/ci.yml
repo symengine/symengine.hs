@@ -70,7 +70,7 @@ jobs:
     - name: Build Haskell code
       run: |
         echo "package symengine" >> cabal.project.local
-        echo "  extra-lib-dirs: /opt/symengine" >> cabal.project.local
+        echo "  extra-lib-dirs: /opt/symengine/lib" >> cabal.project.local
         cabal build
 
     - name: Test
