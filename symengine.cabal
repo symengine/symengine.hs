@@ -43,8 +43,8 @@ library
   exposed-modules:     Symengine
   extra-libraries:     symengine
                        teuchos
-                       gmp
-                       stdc++
+  if os(linux)
+    extra-libraries:   stdc++
 
 test-suite symengine-test
   import:              common-options
