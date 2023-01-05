@@ -37,11 +37,11 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
-          cmake ninja-build g++
+          cmake ninja-build g++ libboost-all-dev
     - name: Install system dependencies (MacOS)
       if: matrix.os == 'macos-latest'
       run: |
-        brew install cmake ninja-build
+        brew install cmake ninja-build boost
 
     - uses: actions/cache@v3
       name: Cache /opt/symengine
