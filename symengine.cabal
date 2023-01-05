@@ -1,40 +1,58 @@
-name:                symengine
-version:             0.1.2.0
-synopsis:            SymEngine symbolic mathematics engine for Haskell
-description:         Please see README.md
-homepage:            http://github.com/symengine/symengine.hs#readme
-license:             MIT
-license-file:        LICENSE
-author:              Siddharth Bhat
-maintainer:          siddu.druid@gmail.com
-copyright:           2016 Siddharth Bhat
-category:            FFI, Math, Symbolic Computation
-build-type:          Simple
--- extra-source-files:
-cabal-version:       >=1.10
+cabal-version:         3.0
+name:                  symengine
+version:               0.1.2.0
+synopsis:              SymEngine symbolic mathematics engine for Haskell
+description:           Please see README.md
+homepage:              https://github.com/symengine/symengine.hs
+license:               MIT
+license-file:          LICENSE
+author:                Siddharth Bhat
+maintainer:            siddu.druid@gmail.com
+copyright:             2016 Siddharth Bhat
+category:              FFI, Math, Symbolic Computation
+build-type:            Simple
+tested-with:           GHC == 8.10.7
+
+common common-options
+  build-depends:       base >= 4.13.0.0
+
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Widentities
+                       -Wincomplete-uni-patterns
+                       -Wincomplete-record-updates
+  if impl(ghc >= 8.0)
+    ghc-options:       -Wredundant-constraints
+  if impl(ghc >= 8.2)
+    ghc-options:       -fhide-source-paths
+  if impl(ghc >= 8.4)
+    ghc-options:       -Wmissing-export-lists
+                       -Wpartial-fields
+  if impl(ghc >= 8.8)
+    ghc-options:       -Wmissing-deriving-strategies
+
+  default-language:    Haskell2010
+  default-extensions:  BangPatterns
+                       FlexibleContexts
+                       FlexibleInstances
+                       DerivingVia
 
 library
+  import:              common-options
   hs-source-dirs:      src
   exposed-modules:     Symengine
-  build-depends:       base >= 4.5.0 && <= 5
-  default-language:    Haskell2010
+  extra-libraries:     symengine
+                       teuchos
+                       gmp
+                       stdc++
 
 test-suite symengine-test
+  import:              common-options
   type:                exitcode-stdio-1.0
-  hs-source-dirs:      test, src
+  hs-source-dirs:      test
   main-is:             Spec.hs
-  build-depends:       base >= 4.5.0 && <= 5
-                     , symengine >= 0.1.1 && <= 0.2
-                     , tasty >= 0.10.0 && <= 0.13
-                     , tasty-hunit >= 0.9.0 && <= 1.5
-                     , tasty-quickcheck >= 0.8.0 && <= 1.5
+  build-depends:       symengine
+                     , tasty >= 0.10.0
+                     , tasty-hunit >= 0.9.0
+                     , tasty-quickcheck >= 0.8.0
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  extra-libraries:     symengine stdc++ gmpxx gmp
-  
-  other-modules:       Symengine
-
-  default-language:    Haskell2010
-
-source-repository head
-  type:     git
-  location: https://github.com/symengine/symengine.hs
