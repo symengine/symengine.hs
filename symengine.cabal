@@ -41,8 +41,10 @@ library
   import:              common-options
   hs-source-dirs:      src
   exposed-modules:     Symengine
+                       Symengine.Internal
+  build-depends:       text
+                     , bytestring
   extra-libraries:     symengine
-                       teuchos
   if os(linux)
     extra-libraries:   stdc++
   if os(darwin) || os(osx)
