@@ -76,4 +76,6 @@ jobs:
 
     - name: Test
       run: |
+        export LD_LIBRARY_PATH=/opt/symengine/lib:$LD_LIBRARY_PATH
+        export DYLD_LIBRARY_PATH=/opt/symengine/lib:$DYLD_LIBRARY_PATH
         cabal test --test-show-details=direct
