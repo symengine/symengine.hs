@@ -45,6 +45,8 @@ library
                        teuchos
   if os(linux)
     extra-libraries:   stdc++
+  if os(darwin) || os(osx)
+    extra-libraries:   c++
 
 test-suite symengine-test
   import:              common-options
