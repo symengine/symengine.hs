@@ -59,6 +59,7 @@ jobs:
         cmake -B build -G Ninja \
           -DCMAKE_INSTALL_PREFIX=/opt/symengine \
           -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_SHARED_LIBS=ON \
           -DWITH_SYMENGINE_THREAD_SAFE=ON \
           -DBUILD_TESTS=OFF \
           -DBUILD_BENCHMARKS=OFF \
