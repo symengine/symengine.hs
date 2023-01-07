@@ -1,5 +1,7 @@
+{-# LANGUAGE CApiFFI #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Symengine.Internal
   ( Basic,
@@ -7,13 +9,20 @@ module Symengine.Internal
     basicToText,
     constZero,
     constOne,
+    isNumber,
+    isPositive,
+    isNegative,
+    isZero,
+    isComplex,
     symengineVersion,
   )
 where
 
 import Control.Exception (bracket)
+import Control.Monad (when)
 import Data.Bits (toIntegralSized)
 import Data.ByteString (packCString, useAsCString)
+import Data.Ratio
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
@@ -24,9 +33,10 @@ import Foreign.Ptr
 import Foreign.Storable
 import GHC.Exts (IsString (..))
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import System.IO.Unsafe (unsafePerformIO)
 
-data Cbasic_struct
+data {-# CTYPE "symengine/cwrapper.h" "basic_struct" #-} Cbasic_struct
   = Cbasic_struct
       {-# UNPACK #-} !(Ptr ())
       {-# UNPACK #-} !(Ptr ())
@@ -80,30 +90,35 @@ newBasicNoDestructor initialize = do
 withBasic :: Basic -> (Ptr Cbasic_struct -> IO a) -> IO a
 withBasic (Basic fp) = withForeignPtr fp
 
+checkError :: HasCallStack => Text -> CInt -> IO ()
+checkError name e
+  | e == 0 = pure ()
+  | otherwise =
+      error $
+        Text.unpack name <> " failed with: " <> show (toEnum (fromIntegral e) :: SymengineError)
+
 unaryOp :: (Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()) -> Basic -> Basic
-unaryOp f x = unsafePerformIO $!
+unaryOp = unaryOp' pure
+
+unaryOp' :: (a -> IO ()) -> (Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO a) -> Basic -> Basic
+unaryOp' check f x = unsafePerformIO $!
   withBasic x $ \xPtr ->
-    newBasic (\out -> f out xPtr)
-{-# NOINLINE unaryOp #-}
+    newBasic (\out -> check =<< f out xPtr)
 
 binaryOp :: (Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()) -> Basic -> Basic -> Basic
-binaryOp f x y = unsafePerformIO $!
+binaryOp = binaryOp' pure
+
+binaryOp' :: (a -> IO ()) -> (Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO a) -> Basic -> Basic -> Basic
+binaryOp' check f x y = unsafePerformIO $!
   withBasic x $ \xPtr ->
     withBasic y $ \yPtr ->
-      newBasic (\out -> f out xPtr yPtr)
-{-# NOINLINE binaryOp #-}
+      newBasic (\out -> check =<< f out xPtr yPtr)
 
-foreign import ccall unsafe "basic_new_stack"
-  basic_new_stack :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "&basic_free_stack"
-  basic_free_stack :: FunPtr (Ptr Cbasic_struct -> IO ())
-
-foreign import ccall unsafe "basic_str"
-  basic_str :: Ptr Cbasic_struct -> IO CString
-
-foreign import ccall unsafe "basic_str_free"
-  basic_str_free :: CString -> IO ()
+queryOp :: (Ptr Cbasic_struct -> IO CInt) -> Basic -> Bool
+queryOp f x =
+  unsafePerformIO $!
+    withBasic x $
+      fmap (toEnum . fromIntegral) . f
 
 basicToText :: Basic -> Text
 basicToText x = unsafePerformIO $
@@ -149,10 +164,23 @@ basicFromInt n =
   unsafePerformIO $! do
     x <- newBasic (\_ -> pure ())
     withBasic x $ \p -> do
-      e <- integer_set_si p (fromIntegral n)
-      if e /= 0
-        then error $ "integer_set_si failed: " <> show (toEnum (fromIntegral e) :: SymengineError)
-        else pure x
+      checkError "integer_set_si" =<< integer_set_si p (fromIntegral n)
+      pure x
+
+isZero :: Basic -> Bool
+isZero x = queryOp number_is_zero x
+
+isPositive :: Basic -> Bool
+isPositive x = queryOp number_is_positive x
+
+isNegative :: Basic -> Bool
+isNegative x = queryOp number_is_negative x
+
+isNumber :: Basic -> Bool
+isNumber = queryOp is_a_Number
+
+isComplex :: Basic -> Bool
+isComplex = queryOp is_a_Complex
 
 instance Num Basic where
   (+) = binaryOp basic_add
@@ -160,10 +188,39 @@ instance Num Basic where
   (*) = binaryOp basic_mul
   negate = unaryOp basic_neg
   abs = unaryOp basic_abs
-  signum = error "Num instance of Basic does not implement signum"
+  signum _ = error "Num instance of Basic does not implement signum"
   fromInteger n = case toIntegralSized n of
     Just k -> basicFromInt k
     Nothing -> error $ "integer overflow in fromInteger " <> show n
+
+instance Fractional Basic where
+  (/) = binaryOp basic_div
+  fromRational r =
+    binaryOp'
+      (checkError "rational_set")
+      rational_set
+      (fromInteger (numerator r))
+      (fromInteger (denominator r))
+  recip r = constOne / r
+
+instance Floating Basic where
+  pi = constPi
+  exp = unaryOp' (checkError "basic_exp") basic_exp
+  log = unaryOp' (checkError "basic_log") basic_log
+  (**) = binaryOp' (checkError "basic_pow") basic_pow
+  sqrt = unaryOp' (checkError "basic_sqrt") basic_sqrt
+  sin = unaryOp' (checkError "basic_sin") basic_sin
+  cos = unaryOp' (checkError "basic_cos") basic_cos
+  tan = unaryOp' (checkError "basic_tan") basic_tan
+  asin = unaryOp' (checkError "basic_asin") basic_asin
+  acos = unaryOp' (checkError "basic_acos") basic_acos
+  atan = unaryOp' (checkError "basic_atan") basic_atan
+  sinh = unaryOp' (checkError "basic_sinh") basic_sinh
+  cosh = unaryOp' (checkError "basic_cosh") basic_cosh
+  tanh = unaryOp' (checkError "basic_tanh") basic_tanh
+  asinh = unaryOp' (checkError "basic_asinh") basic_asinh
+  acosh = unaryOp' (checkError "basic_acosh") basic_acosh
+  atanh = unaryOp' (checkError "basic_atanh") basic_atanh
 
 constZero :: Basic
 constZero = unsafePerformIO $! newBasicNoDestructor basic_const_zero
@@ -171,56 +228,8 @@ constZero = unsafePerformIO $! newBasicNoDestructor basic_const_zero
 constOne :: Basic
 constOne = unsafePerformIO $! newBasicNoDestructor basic_const_one
 
-foreign import ccall unsafe "basic_const_zero"
-  basic_const_zero :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_const_one"
-  basic_const_one :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_const_minus_one"
-  basic_const_minus_one :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_const_I"
-  basic_const_I :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_const_pi"
-  basic_const_pi :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_const_E"
-  basic_const_E :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_const_EulerGamma"
-  basic_const_EulerGamma :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_const_Catalan"
-  basic_const_Catalan :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_const_GoldenRatio"
-  basic_const_GoldenRatio :: Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "integer_set_si"
-  integer_set_si :: Ptr Cbasic_struct -> CLong -> IO CInt
-
-foreign import ccall unsafe "basic_parse"
-  basic_parse :: Ptr Cbasic_struct -> CString -> IO CInt
-
-foreign import ccall unsafe "basic_eq"
-  basic_eq :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
-
-foreign import ccall unsafe "basic_add"
-  basic_add :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_sub"
-  basic_sub :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_mul"
-  basic_mul :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_abs"
-  basic_abs :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
-
-foreign import ccall unsafe "basic_neg"
-  basic_neg :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
+constPi :: Basic
+constPi = unsafePerformIO $! newBasicNoDestructor basic_const_pi
 
 -- | Unicode-safe alternative to 'peekCString'
 peekUtf8 :: CString -> IO Text
@@ -235,5 +244,164 @@ symengineVersion :: Text
 symengineVersion = unsafePerformIO $ peekUtf8 =<< symengine_version
 {-# NOINLINE symengineVersion #-}
 
-foreign import ccall unsafe "symengine_version"
+foreign import capi unsafe "symengine/cwrapper.h basic_new_stack"
+  basic_new_stack :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h &basic_free_stack"
+  basic_free_stack :: FunPtr (Ptr Cbasic_struct -> IO ())
+
+foreign import capi unsafe "symengine/cwrapper.h basic_str"
+  basic_str :: Ptr Cbasic_struct -> IO CString
+
+foreign import capi unsafe "symengine/cwrapper.h basic_str_free"
+  basic_str_free :: CString -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_const_zero"
+  basic_const_zero :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_const_one"
+  basic_const_one :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_const_minus_one"
+  basic_const_minus_one :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_const_I"
+  basic_const_I :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_const_pi"
+  basic_const_pi :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_const_E"
+  basic_const_E :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_const_EulerGamma"
+  basic_const_EulerGamma :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_const_Catalan"
+  basic_const_Catalan :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_const_GoldenRatio"
+  basic_const_GoldenRatio :: Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h integer_set_si"
+  integer_set_si :: Ptr Cbasic_struct -> CLong -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h rational_set"
+  rational_set :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_parse"
+  basic_parse :: Ptr Cbasic_struct -> CString -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_eq"
+  basic_eq :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_add"
+  basic_add :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_sub"
+  basic_sub :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_mul"
+  basic_mul :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_div"
+  basic_div :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_pow"
+  basic_pow :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_abs"
+  basic_abs :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_neg"
+  basic_neg :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h basic_sqrt"
+  basic_sqrt :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_sin"
+  basic_sin :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_cos"
+  basic_cos :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_tan"
+  basic_tan :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_asin"
+  basic_asin :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_acos"
+  basic_acos :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_atan"
+  basic_atan :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_sinh"
+  basic_sinh :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_cosh"
+  basic_cosh :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_tanh"
+  basic_tanh :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_asinh"
+  basic_asinh :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_acosh"
+  basic_acosh :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_atanh"
+  basic_atanh :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_exp"
+  basic_exp :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_log"
+  basic_log :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h number_is_zero"
+  number_is_zero :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h number_is_negative"
+  number_is_negative :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h number_is_positive"
+  number_is_positive :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h number_is_complex"
+  number_is_complex :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_Number"
+  is_a_Number :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_Integer"
+  is_a_Integer :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_Rational"
+  is_a_Rational :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_Symbol"
+  is_a_Symbol :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_Complex"
+  is_a_Complex :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_RealDouble"
+  is_a_RealDouble :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_ComplexDouble"
+  is_a_ComplexDouble :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_RealMPFR"
+  is_a_RealMPFR :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_ComplexMPC"
+  is_a_ComplexMPC :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h is_a_Set"
+  is_a_Set :: Ptr Cbasic_struct -> IO CInt
+
+foreign import ccall unsafe "symengine/cwrapper.h symengine_version"
   symengine_version :: IO CString
