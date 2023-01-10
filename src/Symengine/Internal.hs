@@ -1,25 +1,52 @@
 {-# LANGUAGE CApiFFI #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Symengine.Internal
   ( Basic,
     basicFromText,
     basicToText,
-    constZero,
-    constOne,
+    mkFunction,
+    im,
+
+    -- ** Predicates
     isNumber,
+    isInteger,
+    isRational,
+    isComplex,
+    isSymbol,
     isPositive,
     isNegative,
     isZero,
-    isComplex,
+
+    -- ** Complex numbers
+    realPart,
+    imagPart,
+
+    -- ** Vector
+    Vec,
+    vecSize,
+    vecIndex,
+
+    -- ** Set
+    Set,
+    setSize,
+    setElem,
+
+    -- ** Utilities
+    freeSymbols,
+    functionSymbols,
     symengineVersion,
+
+    -- ** Reexports
+    toList,
+    fromList,
+    fromString,
   )
 where
 
 import Control.Exception (bracket)
-import Control.Monad (when)
 import Data.Bits (toIntegralSized)
 import Data.ByteString (packCString, useAsCString)
 import Data.Ratio
@@ -27,11 +54,11 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Foreign.C.String (CString)
-import Foreign.C.Types (CInt (..), CLong (..))
+import Foreign.C.Types (CInt (..), CLong (..), CSize (..))
 import Foreign.ForeignPtr
 import Foreign.Ptr
 import Foreign.Storable
-import GHC.Exts (IsString (..))
+import GHC.Exts (IsList (..), IsString (..))
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import System.IO.Unsafe (unsafePerformIO)
@@ -50,6 +77,10 @@ instance Storable Cbasic_struct where
   {-# INLINE alignment #-}
   peek _ = error "Storable instance for Cbasic_struct does not implement peek, because you should not rely on the internal representation of it"
   poke _ _ = error "Storable instance for Cbasic_struct does not implement poke, because you should not rely on the internal representation of it"
+
+data {-# CTYPE "symengine/cwrapper.h" "CVecBasic" #-} CVecBasic
+
+data {-# CTYPE "symengine/cwrapper.h" "CSetBasic" #-} CSetBasic
 
 data SymengineError
   = RuntimeError
@@ -73,6 +104,10 @@ instance Enum SymengineError where
 
 newtype Basic = Basic (ForeignPtr Cbasic_struct)
 
+newtype Vec = Vec (ForeignPtr CVecBasic)
+
+newtype Set = Set (ForeignPtr CSetBasic)
+
 -- | Allocate a new 'Basic' and use the provided function for initialization.
 newBasic :: (Ptr Cbasic_struct -> IO ()) -> IO Basic
 newBasic initialize = do
@@ -89,6 +124,91 @@ newBasicNoDestructor initialize = do
 
 withBasic :: Basic -> (Ptr Cbasic_struct -> IO a) -> IO a
 withBasic (Basic fp) = withForeignPtr fp
+
+-- | Allocate a new 'Vec'.
+newVec :: IO Vec
+newVec = pure . Vec =<< newForeignPtr vecbasic_free =<< vecbasic_new
+
+withVec :: Vec -> (Ptr CVecBasic -> IO a) -> IO a
+withVec (Vec fp) = withForeignPtr fp
+
+vecSize :: Vec -> Int
+vecSize x =
+  unsafePerformIO . withVec x $
+    fmap fromIntegral . vecbasic_size
+
+vecGet :: HasCallStack => Vec -> Int -> IO Basic
+vecGet v i = withVec v $ \vPtr -> newBasic $ \xPtr ->
+  checkError "vecbasic_get" =<< vecbasic_get vPtr (fromIntegral i) xPtr
+
+vecIndex :: HasCallStack => Vec -> Int -> Basic
+vecIndex v i = unsafePerformIO $! vecGet v i
+
+vecSet :: HasCallStack => Vec -> Int -> Basic -> IO ()
+vecSet v i x = withVec v $ \vPtr -> withBasic x $ \xPtr ->
+  checkError "vecbasic_set" =<< vecbasic_set vPtr (fromIntegral i) xPtr
+
+vecPushBack :: HasCallStack => Vec -> Basic -> IO ()
+vecPushBack v x = withVec v $ \vPtr -> withBasic x $ \xPtr ->
+  checkError "vecbasic_push_back" =<< vecbasic_push_back vPtr xPtr
+
+instance IsList Vec where
+  type Item Vec = Basic
+  toList v = unsafePerformIO $ go (vecSize v - 1) []
+    where
+      go !i acc
+        | i >= 0 = do
+            !x <- vecGet v i
+            go (i - 1) (x : acc)
+        | otherwise = pure acc
+  fromList list = unsafePerformIO $ do
+    v <- newVec
+    let go [] = pure ()
+        go (x : xs) = vecPushBack v x >> go xs
+    go list
+    pure v
+
+newSet :: IO Set
+newSet = pure . Set =<< newForeignPtr setbasic_free =<< setbasic_new
+
+withSet :: Set -> (Ptr CSetBasic -> IO a) -> IO a
+withSet (Set fp) = withForeignPtr fp
+
+setSize :: Set -> Int
+setSize x = unsafePerformIO . withSet x $ fmap fromIntegral . setbasic_size
+
+setGet :: Set -> Int -> IO Basic
+setGet s i = withSet s $ \sPtr -> newBasic $ \xPtr ->
+  setbasic_get sPtr (fromIntegral i) xPtr
+
+setInsert :: Set -> Basic -> IO Bool
+setInsert s x = withSet s $ \sPtr -> withBasic x $ \xPtr ->
+  toEnum . fromIntegral <$> setbasic_insert sPtr xPtr
+
+setFind :: Set -> Basic -> IO Bool
+setFind s x = withSet s $ \sPtr -> withBasic x $
+  fmap (toEnum . fromIntegral) . setbasic_find sPtr
+
+setElem :: Basic -> Set -> Bool
+setElem x s = unsafePerformIO $! setFind s x
+
+instance IsList Set where
+  type Item Set = Basic
+  toList s = unsafePerformIO $ go (setSize s - 1) []
+    where
+      go !i acc
+        | i >= 0 = do
+            !x <- setGet s i
+            go (i - 1) (x : acc)
+        | otherwise = pure acc
+  fromList list = unsafePerformIO $ do
+    s <- newSet
+    let go [] = pure ()
+        go (x : xs) = do
+          _ <- setInsert s x
+          go xs
+    go list
+    pure s
 
 checkError :: HasCallStack => Text -> CInt -> IO ()
 checkError name e
@@ -179,6 +299,15 @@ isNegative x = queryOp number_is_negative x
 isNumber :: Basic -> Bool
 isNumber = queryOp is_a_Number
 
+isInteger :: Basic -> Bool
+isInteger = queryOp is_a_Integer
+
+isRational :: Basic -> Bool
+isRational = queryOp is_a_Rational
+
+isSymbol :: Basic -> Bool
+isSymbol = queryOp is_a_Symbol
+
 isComplex :: Basic -> Bool
 isComplex = queryOp is_a_Complex
 
@@ -230,6 +359,40 @@ constOne = unsafePerformIO $! newBasicNoDestructor basic_const_one
 
 constPi :: Basic
 constPi = unsafePerformIO $! newBasicNoDestructor basic_const_pi
+
+im :: Basic
+im = unsafePerformIO $! newBasicNoDestructor basic_const_I
+
+realPart :: HasCallStack => Basic -> Basic
+realPart = unaryOp' (checkError "complex_base_real_part") complex_base_real_part
+
+imagPart :: HasCallStack => Basic -> Basic
+imagPart = unaryOp' (checkError "complex_base_imaginary_part") complex_base_imaginary_part
+
+mkFunction :: HasCallStack => Text -> Vec -> Basic
+mkFunction name args =
+  unsafePerformIO $!
+    newBasic $ \xPtr ->
+      withUtf8 name $ \namePtr ->
+        withVec args $ \argsPtr ->
+          checkError "function_symbol_set"
+            =<< function_symbol_set xPtr namePtr argsPtr
+
+freeSymbols :: HasCallStack => Basic -> Set
+freeSymbols x =
+  unsafePerformIO $! do
+    s <- newSet
+    withBasic x $ \xPtr -> withSet s $ \sPtr ->
+      checkError "basic_free_symbols" =<< basic_free_symbols xPtr sPtr
+    pure s
+
+functionSymbols :: HasCallStack => Basic -> Set
+functionSymbols x =
+  unsafePerformIO $! do
+    s <- newSet
+    withBasic x $ \xPtr -> withSet s $ \sPtr ->
+      checkError "basic_function_symbols" =<< basic_function_symbols sPtr xPtr
+    pure s
 
 -- | Unicode-safe alternative to 'peekCString'
 peekUtf8 :: CString -> IO Text
@@ -402,6 +565,75 @@ foreign import capi unsafe "symengine/cwrapper.h is_a_ComplexMPC"
 
 foreign import capi unsafe "symengine/cwrapper.h is_a_Set"
   is_a_Set :: Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_get_args"
+  basic_get_args :: Ptr Cbasic_struct -> Ptr CVecBasic -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_free_symbols"
+  basic_free_symbols :: Ptr Cbasic_struct -> Ptr CSetBasic -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h basic_function_symbols"
+  basic_function_symbols :: Ptr CSetBasic -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h function_symbol_set"
+  function_symbol_set :: Ptr Cbasic_struct -> CString -> Ptr CVecBasic -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h complex_base_real_part"
+  complex_base_real_part :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h complex_base_imaginary_part"
+  complex_base_imaginary_part :: Ptr Cbasic_struct -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h vecbasic_new"
+  vecbasic_new :: IO (Ptr CVecBasic)
+
+foreign import capi unsafe "symengine/cwrapper.h &vecbasic_free"
+  vecbasic_free :: FunPtr (Ptr CVecBasic -> IO ())
+
+foreign import capi unsafe "symengine/cwrapper.h vecbasic_push_back"
+  vecbasic_push_back :: Ptr CVecBasic -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h vecbasic_get"
+  vecbasic_get :: Ptr CVecBasic -> CSize -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h vecbasic_set"
+  vecbasic_set :: Ptr CVecBasic -> CSize -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h vecbasic_erase"
+  vecbasic_erase :: Ptr CVecBasic -> CSize -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h vecbasic_size"
+  vecbasic_size :: Ptr CVecBasic -> IO CSize
+
+foreign import capi unsafe "symengine/cwrapper.h basic_max"
+  basic_max :: Ptr Cbasic_struct -> Ptr CVecBasic -> IO CSize
+
+foreign import capi unsafe "symengine/cwrapper.h basic_min"
+  basic_min :: Ptr Cbasic_struct -> Ptr CVecBasic -> IO CSize
+
+foreign import capi unsafe "symengine/cwrapper.h basic_add_vec"
+  basic_add_vec :: Ptr Cbasic_struct -> Ptr CVecBasic -> IO CSize
+
+foreign import capi unsafe "symengine/cwrapper.h basic_mul_vec"
+  basic_mul_vec :: Ptr Cbasic_struct -> Ptr CVecBasic -> IO CSize
+
+foreign import capi unsafe "symengine/cwrapper.h setbasic_new"
+  setbasic_new :: IO (Ptr CSetBasic)
+
+foreign import capi unsafe "symengine/cwrapper.h &setbasic_free"
+  setbasic_free :: FunPtr (Ptr CSetBasic -> IO ())
+
+foreign import capi unsafe "symengine/cwrapper.h setbasic_insert"
+  setbasic_insert :: Ptr CSetBasic -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h setbasic_get"
+  setbasic_get :: Ptr CSetBasic -> CInt -> Ptr Cbasic_struct -> IO ()
+
+foreign import capi unsafe "symengine/cwrapper.h setbasic_find"
+  setbasic_find :: Ptr CSetBasic -> Ptr Cbasic_struct -> IO CInt
+
+foreign import capi unsafe "symengine/cwrapper.h setbasic_size"
+  setbasic_size :: Ptr CSetBasic -> IO CSize
 
 foreign import ccall unsafe "symengine/cwrapper.h symengine_version"
   symengine_version :: IO CString

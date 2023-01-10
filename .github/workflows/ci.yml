@@ -72,6 +72,7 @@ jobs:
       run: |
         echo "package symengine" >> cabal.project.local
         echo "  extra-lib-dirs: /opt/symengine/lib" >> cabal.project.local
+        echo "  extra-include-dirs: /opt/symengine/include" >> cabal.project.local
         cabal build
 
     - name: Test

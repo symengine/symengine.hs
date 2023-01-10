@@ -1,9 +1,14 @@
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 import Data.List
 import Data.Monoid
 import Data.Ord
-import Symengine as Sym
+-- import Symengine as Sym
+import Data.Ratio
+import Symengine.Internal
 import Test.Tasty
-import Test.Tasty.HUnit as HU
+import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC
 import Prelude hiding (pi)
 
@@ -21,30 +26,51 @@ tests = testGroup "Tests" [unitTests]
 unitTests =
   testGroup
     "Unit tests"
-    [ HU.testCase "FFI Sanity Check - ASCII Art should be non-empty" $
-        do
-          ascii_art <- Sym.ascii_art_str
-          HU.assertBool "ASCII art from ascii_art_str is empty" (not . null $ ascii_art)
+    [ -- testCase "FFI Sanity Check - ASCII Art should be non-empty" $
+      --   do
+      --     ascii_art <- Sym.ascii_art_str
+      --     assertBool "ASCII art from ascii_art_str is empty" (not . null $ ascii_art),
+      testCase "test_complex" $ do
+        let r = fromRational (100 % 47) :: Basic
+            i = fromRational (76 % 59)
+            e = r + i * im
+        show e @?= "100/47 + 76/59*I"
+        isSymbol e @?= False
+        isRational e @?= False
+        isInteger e @?= False
+        isComplex e @?= True
+        isZero e @?= False
+        isNegative e @?= False
+        isPositive e @?= False
 
-          -- , HU.testCase "Basic Constructors" $
-          -- do
-          --   "0" @?= (show zero)
-          --   "1" @?= (show one)
-          --   "-1" @?= (show minus_one)
-          -- , HU.testCase "Basic Trignometric Functions" $
-          -- do
-          --   let pi_over_3 = pi / 3 :: BasicSym
-          --   let pi_over_2 = pi / 2 :: BasicSym
+        show (realPart e) @?= "100/47"
+        isSymbol (realPart e) @?= False
+        isRational (realPart e) @?= True
+        isInteger (realPart e) @?= False
+        isComplex (realPart e) @?= False
 
-          --   sin zero @?= zero
-          --   cos zero @?= one
-          --
-          --   sin (pi / 6) @?= 1 / 2
-          --   sin (pi / 3) @?= (3 ** (1/2)) / 2
+        show (imagPart e) @?= "76/59"
+        isSymbol (imagPart e) @?= False
+        isRational (imagPart e) @?= True
+        isInteger (imagPart e) @?= False
+        isComplex (imagPart e) @?= False,
+      testCase "test_free_symbols" $ do
+        let x = "x" :: Basic
+            y = "y"
+            z = "z"
+            e = 123
+            expr = (e + x) ** y / z
 
-          --   cos (pi / 6) @?= (3 ** (1/2)) / 2
-          --   cos (pi / 3) @?= 1 / 2
+        setSize (freeSymbols expr) @?= 3
+        toList (freeSymbols expr) @?= ["x", "y", "z"],
+      testCase "test_function_symbols" $ do
+        let x = "x" :: Basic
+            y = "y"
+            z = "z"
+            g = mkFunction "g" [x]
+            h = mkFunction "h" [g]
+            f = mkFunction "f" [x + y, g, h]
 
-          --   sin pi_over_2 @?= one
-          --   cos pi_over_2 @?= zero
+        show (z + f) @?= "z + f(x + y, g(x), h(g(x)))"
+        setSize (functionSymbols f) @?= 3
     ]
