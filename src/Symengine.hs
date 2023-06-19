@@ -3,6 +3,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 -- |
 -- Module      : Symengine
@@ -31,15 +32,14 @@ module Symengine
 
 import Control.Exception (bracket_)
 import Control.Monad
-import Data.Bits
-import Data.ByteString (packCString)
+import Data.ByteString (useAsCString)
 import Data.Text (Text, pack, unpack)
 import Data.Text.Encoding qualified as T
 import Data.Vector (Vector)
 import Data.Vector qualified as V
 import Foreign.C.Types
 import Foreign.ForeignPtr
-import Foreign.Marshal (allocaBytes, allocaBytesAligned, toBool, withArrayLen)
+import Foreign.Marshal (allocaBytesAligned, toBool, withArrayLen)
 import Foreign.Ptr
 import GHC.Exts (IsString (..))
 import GHC.Int
@@ -47,30 +47,39 @@ import GHC.Num.BigNat
 import GHC.Num.Integer
 import GHC.Real (Ratio (..))
 import Language.C.Inline qualified as C
-import Language.C.Inline.Cpp.Exception qualified as C
 import Language.C.Inline.Unsafe qualified as CU
 import Symengine.Context
 import Symengine.Internal
 import System.IO.Unsafe
+
+-- | Basic building block of SymEngine expressions.
+newtype Basic = Basic (ForeignPtr CxxBasic)
+
+data DenseMatrix a = DenseMatrix {dmRows :: !Int, dmCols :: !Int, dmData :: !(Vector a)}
+
+data CxxBasic
+
+data CxxInteger
+
+data CxxString
 
 importSymengine
 
 -- | Convert a pointer to @std::string@ into a string.
 --
 -- It properly handles unicode characters.
-peekCxxString :: Ptr CxxString -> IO Text
-peekCxxString p =
-  fmap T.decodeUtf8 $
-    packCString
-      =<< [CU.exp| char const* { $(const std::string* p)->c_str() } |]
+-- peekCxxString :: Ptr CxxString -> IO Text
+-- peekCxxString p =
+--   fmap T.decodeUtf8 $
+--     packCString
+--       =<< [CU.exp| char const* { $(const std::string* p)->c_str() } |]
 
 -- | Call 'peekCxxString' and @delete@ the pointer.
-peekAndDeleteCxxString :: Ptr CxxString -> IO Text
-peekAndDeleteCxxString p = do
-  s <- peekCxxString p
-  [CU.exp| void { delete $(const std::string* p) } |]
-  pure s
-
+-- peekAndDeleteCxxString :: Ptr CxxString -> IO Text
+-- peekAndDeleteCxxString p = do
+--   s <- peekCxxString p
+--   [CU.exp| void { delete $(const std::string* p) } |]
+--   pure s
 constructBasic :: (Ptr CxxBasic -> IO ()) -> IO Basic
 constructBasic construct =
   fmap Basic $ constructWithDeleter size deleter $ \ptr -> do
@@ -189,9 +198,6 @@ instance Show Basic where
       $(constructStringFrom "SymEngine::str(**$(Object* basic'))")
 
 deriving stock instance Show (DenseMatrix Basic)
-
--- peekAndDeleteCxxString
---   =<< [CU.exp| std::string* { new std::string{SymEngine::str(**$(Object* basic'))} } |]
 
 instance Eq Basic where
   a == b = unsafePerformIO $
@@ -512,6 +518,9 @@ fromAST = \case
   SymengineLog x -> log x
   SymengineSign x -> signum x
   SymengineDerivative f v -> V.foldl' diff f v
+  SymengineFunction (T.encodeUtf8 -> s) v -> unsafePerformIO $
+    withVector v $ \args ->
+      $(constructBasicFrom "function_symbol(std::string{$bs-ptr:s, static_cast<size_t>($bs-len:s)}, *$(const Vector* args))")
 
 {-
 -- | Convert a C string into a Haskell string properly handling unicode characters.

@@ -51,9 +51,10 @@ main = hspec $ do
       toAST (signum (symbol "y")) `shouldBe` SymengineSign (symbol "y")
     it "SymengineFunction" $ do
       toAST (parse "f(1, x, y + 2)") `shouldBe` SymengineFunction "f" [1, symbol "x", 2 + symbol "y"]
+      show (fromAST (SymengineFunction "f" [1, symbol "x", 2 + symbol "y"])) `shouldBe` "f(1, x, 2 + y)"
     it "SymengineDerivative" $ do
       toAST (diff (parse "f(x)") (symbol "x")) `shouldBe` SymengineDerivative (parse "f(x)") [symbol "x"]
-      toAST (diff ((symbol "x") ** 2) (symbol "x")) `shouldBe` SymengineMul [2, symbol "x"]
+      toAST (diff (symbol "x" ** 2) (symbol "x")) `shouldBe` SymengineMul [2, symbol "x"]
 
   describe "Misc" $ do
     it "" $ do

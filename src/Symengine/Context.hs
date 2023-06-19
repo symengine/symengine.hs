@@ -1,8 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- |
 -- Module      : Symengine.Context
@@ -12,38 +8,17 @@
 -- This module defines a Template Haskell function 'importSymengine' that sets up everything you need
 -- to call SymEngine functions from 'Language.C.Inline' quasiquotes.
 module Symengine.Context
-  ( Basic (..)
-  , DenseMatrix (..)
-  , CxxString
-  , CxxBasic
-  , CxxInteger
-  , importSymengine
-  , constructBasicFrom
+  ( importSymengine
   )
 where
 
-import Data.Kind (Type)
-import Data.Map (Map, fromList)
-import Data.Vector (Vector)
-import Foreign.ForeignPtr
+import Data.Map.Strict qualified as Map
 import Language.C.Inline qualified as C
 import Language.C.Inline.Context (Context (ctxTypesTable))
 import Language.C.Inline.Cpp qualified as Cpp
-import Language.C.Inline.Cpp.Exception qualified as C
-import Language.C.Inline.Unsafe qualified as CU
-import Language.C.Types (TypeSpecifier (..))
-import Language.Haskell.TH (DecsQ, Exp, Q, TypeQ)
-
--- | Basic building block of SymEngine expressions.
-newtype Basic = Basic (ForeignPtr CxxBasic)
-
-data DenseMatrix a = DenseMatrix {dmRows :: !Int, dmCols :: !Int, dmData :: !(Vector a)}
-
-data CxxBasic
-
-data CxxInteger
-
-data CxxString
+import Language.C.Types (CIdentifier, TypeSpecifier (..))
+import Language.Haskell.TH (DecsQ, Q, TypeQ, lookupTypeName)
+import Language.Haskell.TH.Syntax (Type (..))
 
 -- | One stop function to include all the neccessary machinery to call SymEngine functions via
 -- inline-c.
@@ -54,7 +29,7 @@ importSymengine :: DecsQ
 importSymengine =
   concat
     <$> sequence
-      [ C.context symengineCxt
+      [ C.context =<< symengineCxt
       , C.include "<symengine/basic.h>"
       , C.include "<symengine/eval.h>"
       , C.include "<symengine/printers.h>"
@@ -69,19 +44,35 @@ importSymengine =
       , defineCxxUtils
       ]
 
-symengineCxt :: C.Context
-symengineCxt =
-  C.funCtx <> C.fptrCtx <> C.bsCtx <> Cpp.cppCtx <> C.baseCtx <> mempty {ctxTypesTable = symengineTypePairs}
+symengineCxt :: Q C.Context
+symengineCxt = do
+  typePairs <- Map.fromList <$> symengineTypePairs
+  pure $
+    C.funCtx <> C.fptrCtx <> C.bsCtx <> Cpp.cppCtx <> C.baseCtx <> mempty {ctxTypesTable = typePairs}
 
-symengineTypePairs :: Map TypeSpecifier TypeQ
+symengineTypePairs :: Q [(TypeSpecifier, TypeQ)]
 symengineTypePairs =
-  fromList
-    [ (TypeName "Object", [t|CxxBasic|])
-    , (TypeName "Vector", [t|Vector Basic|])
-    , (TypeName "DenseMatrix", [t|DenseMatrix Basic|])
-    , (TypeName "integer_class", [t|CxxInteger|])
-    , (TypeName "std::string", [t|CxxString|])
+  optionals
+    [ ("Object", "CxxBasic")
+    , ("Vector", "Vector Basic")
+    , ("DenseMatrix", "DenseMatrix Basic")
+    , ("integer_class", "CxxInteger")
+    , ("std::string", "CxxString")
     ]
+  where
+    optional :: (CIdentifier, String) -> Q [(TypeSpecifier, TypeQ)]
+    optional (cName, hsName) = do
+      hsType <- case words hsName of
+        [x] -> fmap ConT <$> lookupTypeName x
+        -- TODO: generalize to multiple arguments
+        [f, x] -> do
+          con <- fmap ConT <$> lookupTypeName f
+          arg <- fmap ConT <$> lookupTypeName x
+          pure $ AppT <$> con <*> arg
+        _ -> pure Nothing
+      pure $ maybe [] (\x -> [(TypeName cName, pure x)]) hsType
+    optionals :: [(CIdentifier, String)] -> Q [(TypeSpecifier, TypeQ)]
+    optionals pairs = concat <$> mapM optional pairs
 
 defineCxxUtils :: DecsQ
 defineCxxUtils =
@@ -94,15 +85,3 @@ defineCxxUtils =
     \#define CONSTRUCT_BASIC(dest, expr) new (dest) Object{expr}               \n\
     \                                                                          \n\
     \"
-
-constructBasicFrom :: String -> Q Exp
-constructBasicFrom expr =
-  C.substitute
-    [("expr", const expr)]
-    [|
-      constructBasic $ \dest ->
-        [CU.block| void {
-          using namespace SymEngine;
-          new ($(Object* dest)) Object{@expr()};
-        } |]
-      |]

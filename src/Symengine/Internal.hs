@@ -1,13 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 -- |
 -- Module      : Symengine.Internal
 -- Description : Symengine bindings to Haskell
 module Symengine.Internal
-  ( constructStringFrom
+  ( constructBasicFrom
+  , constructStringFrom
   , createDenseMatrixVia
   , mkUnaryFunction
   , mkBinaryFunction
@@ -15,28 +17,25 @@ module Symengine.Internal
   ) where
 
 import Control.Exception (bracket_)
-import Control.Monad
-import Data.Bits
 import Data.ByteString (packCString)
-import Data.Text (Text, pack, unpack)
 import Data.Text.Encoding qualified as T
-import Data.Vector (Vector)
-import Data.Vector qualified as V
-import Foreign.C.Types
-import Foreign.ForeignPtr
-import Foreign.Marshal (allocaBytes, toBool)
-import Foreign.Ptr
-import GHC.Exts (IsString (..))
-import GHC.Real (Ratio (..))
+import Foreign.Marshal (allocaBytes)
 import Language.C.Inline qualified as C
-import Language.C.Inline.Context (Context (ctxTypesTable))
-import Language.C.Inline.Cpp qualified as Cpp
-import Language.C.Inline.Cpp.Exception qualified as C
 import Language.C.Inline.Unsafe qualified as CU
-import Language.C.Types (TypeSpecifier (..))
-import Language.Haskell.TH (DecsQ, Exp, Q, TypeQ)
-import Symengine.Context
+import Language.Haskell.TH (Exp, Q)
 import System.IO.Unsafe
+
+constructBasicFrom :: String -> Q Exp
+constructBasicFrom expr =
+  C.substitute
+    [("expr", const expr)]
+    [|
+      constructBasic $ \dest ->
+        [CU.block| void {
+          using namespace SymEngine;
+          new ($(Object* dest)) Object{@expr()};
+        } |]
+      |]
 
 constructStringFrom :: String -> Q Exp
 constructStringFrom expr =
