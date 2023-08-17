@@ -37,4 +37,6 @@ tags
 /*.iml
 /src/highlight.js
 /src/style.css
-/_site/
+/_site/.ghc.environment.*
+result
+result-1
