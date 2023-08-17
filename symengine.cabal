@@ -54,6 +54,7 @@ library
     , bytestring
     , containers
     , ghc-bignum
+    , hashable
     , inline-c
     , inline-c-cpp
     , template-haskell

@@ -71,7 +71,7 @@
               nil
               # Formatters
               fourmolu
-              cabal-fmt
+              # cabal-fmt
               nixpkgs-fmt
               # Previewing markdown files
               python3Packages.grip

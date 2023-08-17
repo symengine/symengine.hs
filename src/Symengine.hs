@@ -30,11 +30,12 @@ module Symengine
   , toAST
   , fromAST
   , AST (..)
+  , BasicKey (..)
   ) where
 
 import Control.Exception (bracket, bracket_)
 import Control.Monad
-import Data.ByteString (useAsCString)
+import Data.Hashable (Hashable (..))
 import Data.Text (Text, pack, unpack)
 import Data.Text.Encoding qualified as T
 import Data.Vector (Vector)
@@ -209,6 +210,35 @@ instance Eq Basic where
       withBasic b $ \b' ->
         toBool
           <$> [CU.exp| bool { eq(**$(const Object* a'), **$(const Object* b')) } |]
+
+instance Hashable Basic where
+  hashWithSalt s = hashWithSalt s . hashInternal
+    where
+      hashInternal x = unsafePerformIO $ withBasic x $ \p -> [CU.exp| uint64_t { (*$(Object const* p))->hash() } |]
+
+newtype BasicKey = BasicKey {unBasicKey :: Basic}
+
+instance Eq BasicKey where
+  (BasicKey a) == (BasicKey b)
+    | hash a /= hash b = False
+    | otherwise = a == b
+
+instance Ord BasicKey where
+  compare (BasicKey a) (BasicKey b) =
+    case compare hashA hashB of
+      LT -> LT
+      GT -> GT
+      EQ -> case compareInternal of
+        -1 -> LT
+        0 -> EQ
+        1 -> GT
+        x -> error $ "__cmp__ returned invalid value: " <> show x
+    where
+      hashA = hash a
+      hashB = hash b
+      compareInternal =
+        unsafePerformIO $ withBasic a $ \aPtr -> withBasic b $ \bPtr ->
+          [CU.exp| int { (*$(Object const* aPtr))->__cmp__(**$(Object const* bPtr)) } |]
 
 parse :: Text -> Basic
 parse (T.encodeUtf8 -> name) =
