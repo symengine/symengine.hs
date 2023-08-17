@@ -24,6 +24,7 @@ import Language.C.Inline qualified as C
 import Language.C.Inline.Unsafe qualified as CU
 import Language.Haskell.TH (Exp, Q)
 import System.IO.Unsafe
+import Language.C.Inline.Cpp.Exception qualified as C
 
 constructBasicFrom :: String -> Q Exp
 constructBasicFrom expr =
@@ -31,7 +32,7 @@ constructBasicFrom expr =
     [("expr", const expr)]
     [|
       constructBasic $ \dest ->
-        [CU.block| void {
+        [C.throwBlock| void {
           using namespace SymEngine;
           new ($(Object* dest)) Object{@expr()};
         } |]

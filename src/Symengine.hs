@@ -10,6 +10,7 @@
 -- Description : Symengine bindings to Haskell
 module Symengine
   ( Basic (..)
+  , DenseMatrix (..)
   , symbol
   , parse
   , e
