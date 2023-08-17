@@ -56,6 +56,12 @@ main = hspec $ do
       toAST (diff (parse "f(x)") (symbol "x")) `shouldBe` SymengineDerivative (parse "f(x)") [symbol "x"]
       toAST (diff (symbol "x" ** 2) (symbol "x")) `shouldBe` SymengineMul [2, symbol "x"]
 
+  describe "subs" $ do
+    it "" $ do
+      subs [("x", 1)] "a + f(x) / x" `shouldBe` "a + f(1)"
+      subs [("k", "c")] "a + b" `shouldBe` "a + b"
+      subs [] "a + b" `shouldBe` "a + b"
+      subs [("a + b", "c")] "a + b" `shouldBe` "c"
   describe "Misc" $ do
     it "" $ do
       print $ parse "a + f(x) / x - 4**2"

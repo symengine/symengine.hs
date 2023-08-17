@@ -18,6 +18,7 @@ module Symengine
   , nan
   , diff
   , evalf
+  , subs
   , inverse
   , identityMatrix
   , zeroMatrix
@@ -31,7 +32,7 @@ module Symengine
   , AST (..)
   ) where
 
-import Control.Exception (bracket_)
+import Control.Exception (bracket, bracket_)
 import Control.Monad
 import Data.ByteString (useAsCString)
 import Data.Text (Text, pack, unpack)
@@ -63,6 +64,8 @@ data CxxBasic
 data CxxInteger
 
 data CxxString
+
+data CxxMapBasicBasic
 
 importSymengine
 
@@ -376,10 +379,24 @@ evalf (evalDomainToCInt -> domain) (fromIntegral -> bits) x = unsafePerformIO $
   withBasic x $ \x' ->
     $(constructBasicFrom "evalf(**$(const Object* x'), $(int bits), static_cast<EvalfDomain>($(int domain)))")
 
---   pureBinaryOp $ \dest f x -> do
---   [CU.exp| void {
---     CONSTRUCT_BASIC($(Object* dest), (*$(const Object* f))->diff(
---       SymEngine::rcp_static_cast<const SymEngine::Symbol>(*$(const Object* x)))) } |]
+withCxxMapBasicBasic :: [(Basic, Basic)] -> (Ptr CxxMapBasicBasic -> IO a) -> IO a
+withCxxMapBasicBasic pairs action =
+  bracket allocate destroy $ \p -> do
+    forM_ pairs $ \(from, to) ->
+      withBasic from $ \fromPtr -> withBasic to $ \toPtr ->
+        [CU.exp| void {
+          $(map_basic_basic* p)->emplace(*$(Object const* fromPtr), *$(Object const* toPtr)) } |]
+    action p
+  where
+    allocate = [CU.exp| map_basic_basic* { new map_basic_basic } |]
+    destroy p = [CU.exp| void { delete $(map_basic_basic* p) } |]
+
+subs :: [(Basic, Basic)] -> Basic -> Basic
+subs replacements expr =
+  unsafePerformIO $
+    withCxxMapBasicBasic replacements $ \replacementsPtr ->
+      withBasic expr $ \exprPtr ->
+        $(constructBasicFrom "subs(*$(Object const* exprPtr), *$(map_basic_basic const* replacementsPtr))")
 
 generateDenseMatrix :: Int -> Int -> (Int -> Int -> Basic) -> DenseMatrix Basic
 generateDenseMatrix nrows ncols f =

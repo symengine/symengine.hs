@@ -37,6 +37,7 @@ importSymengine =
       , C.include "<symengine/add.h>"
       , C.include "<symengine/mul.h>"
       , C.include "<symengine/pow.h>"
+      , C.include "<symengine/subs.h>"
       , C.include "<symengine/matrix.h>"
       , C.include "<symengine/matrices/matrix_expr.h>"
       , C.include "<symengine/matrices/identity_matrix.h>"
@@ -58,6 +59,7 @@ symengineTypePairs =
     , ("DenseMatrix", "DenseMatrix Basic")
     , ("integer_class", "CxxInteger")
     , ("std::string", "CxxString")
+    , ("map_basic_basic", "CxxMapBasicBasic")
     ]
   where
     optional :: (CIdentifier, String) -> Q [(TypeSpecifier, TypeQ)]
